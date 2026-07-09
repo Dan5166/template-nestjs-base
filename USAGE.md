@@ -191,8 +191,24 @@ You get for free: `POST /products`, `GET /products` (paginated + `?search=&sortB
 
 **Authorization:** every route already requires a valid access token (global `JwtAuthGuard`).
 Add `@Public()` to open a route, `@Roles('admin')` to gate by role, or
-`@RequirePermissions('products:create')` for granular control. If you add new permissions,
-register them in the RBAC seeder (`src/database/seeds/rbac.seeder.ts`) and assign them to roles.
+`@RequirePermissions('products:create')` for granular control. Seed baseline permissions in the
+RBAC seeder (`src/database/seeds/rbac.seeder.ts`) so a fresh DB has them; at runtime you can also
+manage roles and permissions through the API (below).
+
+### Managing roles & permissions via the API
+
+The `admin` role can manage RBAC through REST endpoints (all require the matching
+`roles:*` / `permissions:*` / `users:assign-roles` permission):
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET/POST /roles`, `GET/PATCH/DELETE /roles/:id` | CRUD roles; `POST`/`PATCH` accept `permissions: string[]` (names) to set the role's grants |
+| `GET/POST /permissions`, `DELETE /permissions/:id` | List/create/delete permissions (`{ resource, action }` → `resource:action`) |
+| `GET/POST /users/:userId/roles`, `DELETE /users/:userId/roles/:roleName` | Read / assign / remove a user's roles |
+
+> Permission changes take effect on the user's **next login** (the principal's roles/permissions
+> are baked into the access token at sign-in and resolved fresh each request from the token's
+> identity). Seed defaults still live in code so a new environment is reproducible.
 
 **5) Module + register** — `TypeOrmModule.forFeature([Product])`, then add `ProductsModule` to
 `AppModule`.

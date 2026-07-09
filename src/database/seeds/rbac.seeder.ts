@@ -9,6 +9,14 @@ const BASE_PERMISSIONS: Array<{ resource: string; action: string }> = [
   { resource: 'users', action: 'create' },
   { resource: 'users', action: 'update' },
   { resource: 'users', action: 'delete' },
+  { resource: 'users', action: 'assign-roles' },
+  { resource: 'roles', action: 'read' },
+  { resource: 'roles', action: 'create' },
+  { resource: 'roles', action: 'update' },
+  { resource: 'roles', action: 'delete' },
+  { resource: 'permissions', action: 'read' },
+  { resource: 'permissions', action: 'create' },
+  { resource: 'permissions', action: 'delete' },
 ];
 
 /**
