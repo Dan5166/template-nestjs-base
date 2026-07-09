@@ -95,7 +95,24 @@ npm run start:dev               # API at http://localhost:3000/api/v1
 > (docker-compose publishes that port). Check with:
 > `Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue`
 
-### 2. Authenticate (get a token)
+### 2. Easiest: test in the browser (Swagger UI)
+
+No tooling needed — with the app running, open **http://localhost:3000/api/docs**.
+
+1. Expand **`POST /auth/login`** → **Try it out** → log in as the seeded admin:
+   ```json
+   { "email": "admin@template.local", "password": "Admin123!" }
+   ```
+   **Execute**, then copy the `accessToken` from the response.
+2. Click **Authorize** 🔒 (top-right), paste the token, **Authorize**, **Close**.
+   Now every protected request is sent with your `Bearer` token.
+3. Try any endpoint — e.g. `GET /users`, `POST /users`, `GET /users/me`, `POST /auth/logout`.
+   Use **Try it out → Execute** and inspect the response, status code, and headers.
+
+> Prefer the console? Sections 3–5 below do the same from PowerShell. The health check
+> (`GET /api/health`, public) and OpenAPI JSON (`/api/docs-json`) need no auth.
+
+### 3. PowerShell — authenticate (get a token)
 
 ```powershell
 $base = "http://localhost:3000/api/v1"
@@ -120,7 +137,7 @@ Invoke-RestMethod "$base/auth/me" -Headers $headers
 > To test `/auth/refresh` and `/auth/logout` end-to-end, use `curl.exe` with a cookie jar
 > (`-c cookies.txt -b cookies.txt`) or Postman (which keeps cookies automatically).
 
-### 3. Requests with `Invoke-RestMethod` (protected routes)
+### 4. PowerShell — requests with `Invoke-RestMethod` (protected routes)
 
 ```powershell
 # App info is public (no header needed)
@@ -162,7 +179,7 @@ try {
 }
 ```
 
-### 4. Full auth flow with `curl.exe` (cookies for refresh/logout)
+### 5. Full auth flow with `curl.exe` (cookies for refresh/logout)
 
 ```powershell
 $b = "http://localhost:3000/api/v1"
@@ -174,17 +191,29 @@ curl.exe -b cookies.txt -c cookies.txt -X POST "$b/auth/refresh"
 curl.exe -b cookies.txt -X POST "$b/auth/logout" -H "Authorization: Bearer <accessToken>"
 ```
 
-### 5. Things worth verifying
+### 6. Feature checklist — what to verify
 
-- Password never appears in any response.
-- Protected route without a token → `401`; with a valid `Bearer` token → `200`.
-- Wrong password on login → `401` with `"code":"INVALID_CREDENTIALS"`.
-- Duplicate email → `409` with `"code":"EMAIL_ALREADY_EXISTS"`.
-- Weak password / extra field → `400` with a list of validation errors.
-- After `logout`, reusing the same access token → `401` with `"code":"TOKEN_REVOKED"`.
-- Every error uses the standard shape `{ statusCode, code, message, timestamp, path, method }`.
+Run these (in Swagger or PowerShell) to confirm each part of the template works:
 
-### 6. Inspect the database directly
+| Feature | How to test | Expected |
+| --- | --- | --- |
+| Health check | `GET /api/health` (public) | `200`, `status: ok`, database `up` |
+| Login | `POST /auth/login` as admin | `200` + `accessToken` |
+| Global auth guard | `GET /users` **without** a token | `401` |
+| Auth guard (happy path) | `GET /users` **with** a valid token | `200` |
+| Wrong credentials | login with a bad password | `401` `INVALID_CREDENTIALS` |
+| Password hidden | any user response | no `password` field ever |
+| Input validation | `POST /users` weak password / extra field | `400` + list of errors |
+| Duplicate email | register/create an existing email | `409` `EMAIL_ALREADY_EXISTS` |
+| RBAC/PBAC — denied | as a **regular** user, `POST /users` | `403` (only has `users:read`) |
+| RBAC/PBAC — allowed | as **admin**, `POST /users` | `201` |
+| Pagination | `GET /users?page=1&limit=5&search=admin` | envelope `{ data, meta }` |
+| Soft delete | `DELETE /users/:id` then `GET /users/:id` | `204`, then `404` |
+| Restore | `PATCH /users/:id/restore` | `200` |
+| Token revocation | `logout`, then reuse that access token | `401` `TOKEN_REVOKED` |
+| Error shape | trigger any error | `{ statusCode, code, message, timestamp, path, method }` |
+
+### 7. Inspect the database directly
 
 ```powershell
 docker exec -it template_postgres psql -U postgres -d template -c "select id, email, is_active, deleted_at from users;"
