@@ -4,12 +4,14 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Inject,
   Logger,
 } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
 import { QueryFailedError } from 'typeorm';
 import { Request } from 'express';
 import { BusinessException, ErrorCode } from '../exceptions/business.exception';
+import { ERROR_REPORTER, ErrorReporter } from '../observability/error-reporter';
 
 /** Standardized error body returned for every unhandled/handled exception. */
 export interface ErrorResponseBody {
@@ -32,7 +34,10 @@ export interface ErrorResponseBody {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  constructor(private readonly httpAdapterHost: HttpAdapterHost) {}
+  constructor(
+    private readonly httpAdapterHost: HttpAdapterHost,
+    @Inject(ERROR_REPORTER) private readonly errorReporter: ErrorReporter,
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const { httpAdapter } = this.httpAdapterHost;
@@ -46,11 +51,27 @@ export class AllExceptionsFilter implements ExceptionFilter {
         `${body.method} ${body.path} -> ${body.statusCode} ${body.code}`,
         exception instanceof Error ? exception.stack : String(exception),
       );
+      this.reportServerError(exception, body);
     } else {
       this.logger.warn(`${body.method} ${body.path} -> ${body.statusCode} ${body.code}`);
     }
 
     httpAdapter.reply(ctx.getResponse(), body, body.statusCode);
+  }
+
+  /** Hand server errors to the external reporter, never letting it break the response. */
+  private reportServerError(exception: unknown, body: ErrorResponseBody): void {
+    try {
+      this.errorReporter.report(exception, {
+        method: body.method,
+        path: body.path,
+        statusCode: body.statusCode,
+        code: body.code,
+        requestId: body.requestId,
+      });
+    } catch (err) {
+      this.logger.error('Error reporter threw', err instanceof Error ? err.stack : String(err));
+    }
   }
 
   private buildBody(exception: unknown, request: Request): ErrorResponseBody {

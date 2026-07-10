@@ -10,6 +10,7 @@ import { HashingModule } from './shared/hashing/hashing.module';
 import { RedisModule } from './shared/redis/redis.module';
 import { AppLoggerModule } from './shared/logger/logger.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
+import { ObservabilityModule } from './common/observability/observability.module';
 import { HealthModule } from './modules/health/health.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -36,6 +37,7 @@ import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
       envFilePath: [`.env.${process.env.NODE_ENV ?? 'development'}`, '.env'],
     }),
     AppLoggerModule,
+    ObservabilityModule,
     TenancyModule,
     DatabaseModule,
     RedisModule,

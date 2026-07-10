@@ -182,5 +182,7 @@ Cross-cutting building blocks reused by every feature module.
 - [x] **Tenant enforcement** (Phase 11 completion): `TenantScopedEntity` + `TenantSubscriber` (stamps
       `tenantId` on insert) + `BaseCrudService` auto-scoping reads/updates/deletes. Opt-in per entity,
       immutable `tenantId` on update, and a no-op while `MULTI_TENANT=false`
-- [x] **Verified**: lint clean, 30 unit + 14 e2e green (incl. multi-session/reuse + tenant-scoping unit
-      cases) against Postgres, and 14/14 again with `REDIS_ENABLED=true`
+- [x] **Error reporting seam**: pluggable `ErrorReporter` (`ERROR_REPORTER` token) consumed by the
+      exception filter for 5xx errors; no-op by default, swap in Sentry/OTel without touching the filter
+- [x] **Verified**: lint clean, 33 unit + 14 e2e green (incl. multi-session/reuse, tenant-scoping and
+      error-reporter unit cases) against Postgres, and 14/14 again with `REDIS_ENABLED=true`

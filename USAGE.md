@@ -276,6 +276,39 @@ Everything below is **off by default** and flips on via `.env` — no code chang
 | **OAuth** (Google / GitHub) | `OAUTH_ENABLED=true` + provider `*_CLIENT_ID` / `*_CLIENT_SECRET` / `*_CALLBACK_URL` | `/api/v1/auth/google` and `/auth/github` become live (302 → provider). |
 | **Multi-tenancy** | `MULTI_TENANT=true` | See §7 above. |
 
+### Error reporting / observability
+
+Server errors (5xx) are always logged, and the `AllExceptionsFilter` also hands them to a pluggable
+`ErrorReporter`. The default is a **no-op** (nothing leaves the app), so wiring an external tracker
+is just binding your own implementation to the `ERROR_REPORTER` token — no filter changes.
+
+1. Install your SDK (e.g. `npm i @sentry/node`) and init it once in `main.ts` before `listen()`.
+2. Implement the reporter and rebind the token in `ObservabilityModule`:
+
+   ```ts
+   // src/common/observability/sentry-error-reporter.ts
+   import * as Sentry from '@sentry/node';
+   import { ErrorContext, ErrorReporter } from './error-reporter';
+
+   export class SentryErrorReporter implements ErrorReporter {
+     report(error: unknown, context: ErrorContext): void {
+       Sentry.withScope((scope) => {
+         scope.setTags({ path: context.path, method: context.method, code: context.code });
+         if (context.requestId) scope.setTag('requestId', context.requestId);
+         Sentry.captureException(error);
+       });
+     }
+   }
+   ```
+
+   ```ts
+   // observability.module.ts
+   providers: [{ provide: ERROR_REPORTER, useClass: SentryErrorReporter }],
+   ```
+
+Only `statusCode >= 500` reaches the reporter (expected 4xx client errors are not noise), and a
+reporter that throws is caught so it can never break the response.
+
 ## 9. Where to look for common tasks
 
 | I want to… | Look at |
