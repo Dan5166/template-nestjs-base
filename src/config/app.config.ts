@@ -8,6 +8,7 @@ export interface AppConfig {
   apiVersion: string;
   corsOrigins: string[] | boolean;
   multiTenant: boolean;
+  bodyLimit: string;
 }
 
 const parseCorsOrigins = (value?: string): string[] | boolean => {
@@ -26,4 +27,5 @@ export default registerAs<AppConfig>('app', () => ({
   apiVersion: process.env.APP_API_VERSION ?? '1',
   corsOrigins: parseCorsOrigins(process.env.CORS_ORIGINS),
   multiTenant: process.env.MULTI_TENANT === 'true',
+  bodyLimit: process.env.APP_BODY_LIMIT ?? '1mb',
 }));

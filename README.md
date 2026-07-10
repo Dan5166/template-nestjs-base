@@ -20,15 +20,15 @@ tooling/security/observability setup.
 | Authorization      | RBAC (`@Roles()`) + PBAC (`@RequirePermissions()`) |
 | Config validation  | `@nestjs/config` + Joi                        |
 | Logging            | Pino (`nestjs-pino`)                          |
-| Docs               | Swagger / OpenAPI                             |
-| Security           | Helmet, CORS, `@nestjs/throttler`, strict validation |
+| Docs               | Swagger / OpenAPI (off in production by default) |
+| Security           | Helmet, CORS, `@nestjs/throttler`, request body-size limit, strict validation |
 | Testing            | Jest (unit + e2e with Supertest)             |
 
 ## Requirements
 
-- Node.js >= 20
+- Node.js >= 20 (an `.nvmrc` pins `20` — run `nvm use`)
 - npm >= 10
-- Docker (for PostgreSQL / Redis via `docker-compose`) — added in Phase 2
+- Docker (for PostgreSQL / Redis via `docker-compose`, and the production image — see [Deployment](#deployment))
 
 ## Getting started
 
@@ -72,9 +72,14 @@ fails fast on startup if a required variable is missing or invalid.
 > explore and try endpoints from the browser (click **Authorize** and paste a JWT access token).
 > The OpenAPI JSON is at `/api/docs-json`. A **health check** lives at `/api/health`.
 >
+> ℹ️ Docs are **disabled when `NODE_ENV=production`** (so the API surface isn't publicly
+> enumerable). Set `SWAGGER_ENABLED=true` to force them on there — e.g. behind an internal gateway.
+>
 > Authentication is live: **every route requires a Bearer access token** except those marked
 > `@Public()` (`GET /`, `/api/health`, `POST /auth/register`, `POST /auth/login`,
-> `POST /auth/refresh`). You can also test with PowerShell, Postman, or the VS Code REST
+> `POST /auth/refresh`). The public auth endpoints also carry **tighter per-minute rate limits**
+> than the global throttler (`register` 5, `login` 10, `refresh` 20) to blunt brute-force and
+> automated-signup abuse. You can also test with PowerShell, Postman, or the VS Code REST
 > Client / Thunder Client extensions as shown below.
 
 ⚠️ In PowerShell, `curl` is an **alias for `Invoke-WebRequest`** and behaves differently from
@@ -245,7 +250,23 @@ docker exec template_postgres createdb -U postgres template_test
 
 The suite seeds base roles/permissions itself and cleans up via unique per-run emails.
 CI (GitHub Actions, [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs
-`lint → build → unit → e2e` against a Postgres service on every push/PR.
+`lint → build → unit → e2e` on every push/PR against Postgres **and** Redis services — the e2e
+job runs with `REDIS_ENABLED=true` so the Redis-backed token blacklist (the production default)
+is exercised, not just the Postgres fallback.
+
+## Deployment
+
+A multi-stage [`Dockerfile`](./Dockerfile) builds a lean production image (deps + compiled
+`dist/` only) that runs as a non-root `node` user and starts Node directly, so `SIGTERM` reaches
+the process and graceful shutdown hooks fire.
+
+```bash
+docker build -t my-api .
+docker run --rm -p 3000:3000 --env-file .env my-api
+```
+
+Set `NODE_ENV=production` in the container's env. Remember Swagger is off in production unless
+`SWAGGER_ENABLED=true`, and cap request size with `APP_BODY_LIMIT` (default `1mb`).
 
 ## Project structure
 

@@ -293,8 +293,11 @@ Everything below is **off by default** and flips on via `.env` — no code chang
 - [ ] `CORS_ORIGINS` set to your real front-end origin(s), not `*`.
 - [ ] `LOG_PRETTY=false` (JSON logs) and an appropriate `LOG_LEVEL`.
 - [ ] Rotate `SEED_ADMIN_PASSWORD` or delete the seeded admin after creating real accounts.
-- [ ] Review rate limits (`THROTTLE_*`).
-- [ ] `NODE_ENV=production`.
+- [ ] Review rate limits — global `THROTTLE_*` plus the per-endpoint limits on `auth/*`.
+- [ ] `NODE_ENV=production` (this also **disables Swagger** unless `SWAGGER_ENABLED=true`).
+- [ ] Set `APP_BODY_LIMIT` to the smallest size your API needs (default `1mb`).
+- [ ] Build and ship the production image — `docker build -t my-api .` (see
+      [README → Deployment](./README.md#deployment)).
 
 ---
 

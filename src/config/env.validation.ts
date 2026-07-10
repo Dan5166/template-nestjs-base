@@ -14,6 +14,10 @@ export const envValidationSchema = Joi.object({
   APP_GLOBAL_PREFIX: Joi.string().default('api'),
   APP_API_VERSION: Joi.string().default('1'),
   CORS_ORIGINS: Joi.string().default('*'),
+  // Max request body size accepted by the JSON/urlencoded parsers.
+  APP_BODY_LIMIT: Joi.string().default('1mb'),
+  // Force Swagger on in production (off there by default).
+  SWAGGER_ENABLED: Joi.boolean().default(false),
 
   // Database
   DB_HOST: Joi.string().default('localhost'),

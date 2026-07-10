@@ -26,6 +26,8 @@ export class AuthController {
   ) {}
 
   @Public()
+  // Tighter rate limit on registration to curb automated account creation.
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
   @Post('register')
   @ApiOkResponse({ type: AuthResponseDto })
   async register(
@@ -52,6 +54,8 @@ export class AuthController {
 
   @Public()
   @UseGuards(JwtRefreshGuard)
+  // Tighter rate limit on refresh to bound abuse of a stolen refresh cookie.
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOkResponse({ type: AuthResponseDto })

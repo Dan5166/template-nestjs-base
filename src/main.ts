@@ -21,6 +21,10 @@ async function bootstrap(): Promise<void> {
   const config = app.get(ConfigService<AppConfigTree, true>);
   const appConfig = config.get('app', { infer: true });
 
+  // --- Body parsers: cap request size to blunt oversized-payload abuse -----
+  app.useBodyParser('json', { limit: appConfig.bodyLimit });
+  app.useBodyParser('urlencoded', { limit: appConfig.bodyLimit, extended: true });
+
   // --- Security -----------------------------------------------------------
   app.use(helmet());
   app.use(cookieParser());
@@ -51,18 +55,23 @@ async function bootstrap(): Promise<void> {
   // wired as ordered global interceptors in AppModule (order matters — see there).
 
   // --- API docs (Swagger / OpenAPI) ---------------------------------------
+  // Disabled in production so the API surface isn't publicly enumerable. Set
+  // SWAGGER_ENABLED=true to force it on (e.g. behind an internal gateway/auth).
   const docsPath = `${appConfig.globalPrefix}/docs`;
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle(`${appConfig.name} API`)
-    .setDescription('REST API documentation. Click "Authorize" and paste a JWT access token.')
-    .setVersion(appConfig.apiVersion)
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
-    .addCookieAuth('refresh_token')
-    .build();
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup(docsPath, app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  const docsEnabled = appConfig.env !== 'production' || process.env.SWAGGER_ENABLED === 'true';
+  if (docsEnabled) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle(`${appConfig.name} API`)
+      .setDescription('REST API documentation. Click "Authorize" and paste a JWT access token.')
+      .setVersion(appConfig.apiVersion)
+      .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' })
+      .addCookieAuth('refresh_token')
+      .build();
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup(docsPath, app, document, {
+      swaggerOptions: { persistAuthorization: true },
+    });
+  }
 
   // Graceful shutdown hooks (close DB/Redis connections cleanly).
   app.enableShutdownHooks();
@@ -72,7 +81,7 @@ async function bootstrap(): Promise<void> {
   const logger = new Logger('Bootstrap');
   const base = `http://localhost:${appConfig.port}/${appConfig.globalPrefix}`;
   logger.log(`🚀 ${appConfig.name} running on ${base}/v${appConfig.apiVersion} [${appConfig.env}]`);
-  logger.log(`📚 API docs at ${base}/docs`);
+  if (docsEnabled) logger.log(`📚 API docs at ${base}/docs`);
 }
 
 void bootstrap();
