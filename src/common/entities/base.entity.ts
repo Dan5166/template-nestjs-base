@@ -43,16 +43,10 @@ export abstract class BaseEntity {
   @VersionColumn()
   version: number;
 
-  // --- Multi-tenancy hook (disabled by default) ---------------------------
-  // The tenancy scaffolding (context, middleware, @Tenant()) is wired but off
-  // while MULTI_TENANT=false. To make entities tenant-scoped, add a column here
-  // (or on the specific entities that need it) and auto-scope your queries:
-  //
-  //   @Index()
-  //   @Column({ type: 'uuid', nullable: true })
-  //   tenantId: string | null;
-  //
-  // Then filter by `tenantContext.getTenantId()` in your services, or register a
-  // TypeORM EntitySubscriber to set/enforce it automatically.
+  // --- Multi-tenancy --------------------------------------------------------
+  // To make a resource tenant-scoped, extend `TenantScopedEntity` (which adds a
+  // `tenantId` column) instead of this class. The TenantSubscriber then stamps
+  // the active tenant on insert and BaseCrudService filters reads/writes to it
+  // automatically — no per-service wiring. All a no-op while MULTI_TENANT=false.
   // See USAGE.md → "Enabling multi-tenancy".
 }

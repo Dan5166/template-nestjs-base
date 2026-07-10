@@ -153,7 +153,7 @@ Cross-cutting building blocks reused by every feature module.
 - [x] `AsyncLocalStorage` request context (`tenantStorage`) + `TenantContextService`
 - [x] `TenantMiddleware` (header → subdomain → JWT claim) — no-op while `MULTI_TENANT=false`
 - [x] `@Tenant()` param decorator
-- [x] Documented `tenantId` hook on `BaseEntity`
+- [x] `tenantId` hook on `BaseEntity` → now a full opt-in via `TenantScopedEntity` + auto-scoping (see Post-1.0 hardening)
 - [x] Global `TenancyModule`; `GET /` echoes the resolved tenant when enabled (verification path)
 - [x] USAGE.md → "Enabling multi-tenancy" guide (column + subscriber/scoping steps)
 - [x] **Verified both states**: disabled → response unchanged, `X-Tenant-ID` ignored; enabled → `tenant:"acme"` from header, `null` without; full suite still green (lint + 24 unit + 11 e2e)
@@ -179,5 +179,8 @@ Cross-cutting building blocks reused by every feature module.
 - [x] **Multi-session refresh tokens**: dedicated `refresh_tokens` table (one row per device), concurrent
       logins, per-session logout, and reuse detection that revokes the whole session family — access
       tokens carry a `sid` claim so logout targets the exact session (migration `AddRefreshTokens`)
-- [x] **Verified**: lint clean, 24 unit + 14 e2e green (incl. new multi-session/reuse cases) against
-      Postgres, and 14/14 again with `REDIS_ENABLED=true`
+- [x] **Tenant enforcement** (Phase 11 completion): `TenantScopedEntity` + `TenantSubscriber` (stamps
+      `tenantId` on insert) + `BaseCrudService` auto-scoping reads/updates/deletes. Opt-in per entity,
+      immutable `tenantId` on update, and a no-op while `MULTI_TENANT=false`
+- [x] **Verified**: lint clean, 30 unit + 14 e2e green (incl. multi-session/reuse + tenant-scoping unit
+      cases) against Postgres, and 14/14 again with `REDIS_ENABLED=true`

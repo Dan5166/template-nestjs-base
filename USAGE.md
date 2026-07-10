@@ -227,39 +227,41 @@ npm run migration:run
 
 ## 7. Enabling multi-tenancy (optional)
 
-The template ships **tenancy scaffolding that is off by default** (`MULTI_TENANT=false`), so it
-adds zero behavior until you opt in. What's already wired:
+The template ships **tenancy that is off by default** (`MULTI_TENANT=false`), so it adds zero
+behavior until you opt in. What's already wired:
 
 - `TenantMiddleware` — establishes an AsyncLocalStorage context per request; when enabled it
   resolves the tenant from the `X-Tenant-ID` header → sub-domain → JWT `tenantId` claim.
-- `TenantContextService` — inject anywhere to read the active tenant (`getTenantId()`).
+- `TenantContextService` (`getTenantId()`) / `getTenantId()` helper — read the active tenant
+  anywhere, with or without DI.
 - `@Tenant()` — param decorator to inject the tenant id into a handler.
-- A documented hook on `BaseEntity` for adding a `tenantId` column.
+- `TenantScopedEntity` — extend it (instead of `BaseEntity`) to make a resource tenant-scoped.
+- `TenantSubscriber` — stamps `tenantId` on insert for scoped entities.
+- `BaseCrudService` — automatically filters reads/updates/deletes to the active tenant for
+  scoped entities.
 
-To turn it into real data isolation (shared-DB, `tenantId` column strategy):
+Turning on real data isolation (shared-DB, `tenantId`-column strategy) is now two steps:
 
 1. **Enable the flag:** `MULTI_TENANT=true` in `.env`.
-2. **Add the column** to the entities that need it (or to `BaseEntity` for all):
+2. **Make the resource tenant-scoped** — extend `TenantScopedEntity` instead of `BaseEntity`:
 
    ```ts
-   @Index()
-   @Column({ type: 'uuid', nullable: true })
-   tenantId: string | null;
+   @Entity('invoices')
+   export class Invoice extends TenantScopedEntity {
+     @Column() amount: number;
+   }
    ```
-   Then generate + run a migration.
+   Generate + run a migration (adds the `tenant_id` column + index). That's it — any service
+   extending `BaseCrudService` now stamps the tenant on create and scopes every
+   `findAll/findOne/update/remove/restore` to it. Global tables (users, roles, permissions) keep
+   extending `BaseEntity` and stay shared.
 
-3. **Scope writes and reads** by the current tenant. The clean way is a TypeORM
-   `EntitySubscriber` that stamps `tenantId` on insert and a base-service filter that adds
-   `WHERE tenant_id = :tenantId` using `TenantContextService.getTenantId()`. For a quick start,
-   filter explicitly in your service:
-
-   ```ts
-   const tenantId = this.tenantContext.getTenantId();
-   qb.andWhere('entity.tenantId = :tenantId', { tenantId });
-   ```
-
-4. **Choose how tenants are identified** — override `TenantMiddleware.resolveTenant()` if you
+3. **Choose how tenants are identified** — override `TenantMiddleware.resolveTenant()` if you
    don't use the `X-Tenant-ID` header (e.g. always the JWT claim).
+
+> **Custom queries:** only CRUD that goes through `BaseCrudService` is auto-scoped. If you write
+> your own repository/query-builder calls against a scoped entity, add the filter yourself with
+> `getTenantId()` (or `TenantContextService`) — e.g. `qb.andWhere('e.tenantId = :t', { t })`.
 
 Verify quickly: with `MULTI_TENANT=true`, `GET /api/v1` echoes the resolved tenant
 (`curl -H "X-Tenant-ID: acme" http://localhost:3000/api/v1` → `"tenant":"acme"`).

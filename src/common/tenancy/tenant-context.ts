@@ -11,3 +11,10 @@ export interface TenantStore {
  * Shared as a module-level singleton so any layer can reach the active tenant.
  */
 export const tenantStorage = new AsyncLocalStorage<TenantStore>();
+
+/**
+ * Read the active tenant id without DI — for layers that can't easily inject
+ * {@link TenantContextService} (the CRUD base service, the entity subscriber).
+ * Returns `null` when multi-tenancy is off or no tenant was resolved.
+ */
+export const getTenantId = (): string | null => tenantStorage.getStore()?.tenantId ?? null;

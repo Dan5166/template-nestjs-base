@@ -10,6 +10,7 @@ import { ResourceNotFoundException } from '../exceptions/business.exception';
 import { paginate } from '../helpers/pagination.helper';
 import { BaseEntity } from '../entities/base.entity';
 import { Paginated } from '../interfaces/paginated-result.interface';
+import { getTenantId } from '../tenancy/tenant-context';
 
 /**
  * Generic CRUD service over a TypeORM repository. Feature services extend it and
@@ -48,6 +49,7 @@ export abstract class BaseCrudService<T extends BaseEntity & ObjectLiteral> {
 
   async findAll(query: PaginationQueryDto): Promise<Paginated<T>> {
     const qb = this.repository.createQueryBuilder(this.alias);
+    this.applyTenantScope(qb);
     this.applySearch(qb, query);
     this.applySort(qb, query);
     return paginate(qb, query);
@@ -55,7 +57,7 @@ export abstract class BaseCrudService<T extends BaseEntity & ObjectLiteral> {
 
   async findOne(id: string): Promise<T> {
     const entity = await this.repository.findOne({
-      where: { id } as FindOptionsWhere<T>,
+      where: { id, ...this.tenantScope() },
     });
     if (!entity) {
       throw new ResourceNotFoundException(this.entityName, id);
@@ -64,6 +66,9 @@ export abstract class BaseCrudService<T extends BaseEntity & ObjectLiteral> {
   }
 
   async update(id: string, dto: DeepPartial<T>): Promise<T> {
+    // Confirm the row exists *within the active tenant* before mutating it, so a
+    // caller can't preload/overwrite another tenant's record by id.
+    await this.findOne(id);
     const entity = await this.repository.preload({ id, ...dto });
     if (!entity) {
       throw new ResourceNotFoundException(this.entityName, id);
@@ -73,7 +78,10 @@ export abstract class BaseCrudService<T extends BaseEntity & ObjectLiteral> {
 
   /** Soft delete (sets `deletedAt`). */
   async remove(id: string): Promise<void> {
-    const result = await this.repository.softDelete(id);
+    const result = await this.repository.softDelete({
+      id,
+      ...this.tenantScope(),
+    });
     if (!result.affected) {
       throw new ResourceNotFoundException(this.entityName, id);
     }
@@ -81,9 +89,35 @@ export abstract class BaseCrudService<T extends BaseEntity & ObjectLiteral> {
 
   /** Restore a soft-deleted row. */
   async restore(id: string): Promise<void> {
-    const result = await this.repository.restore(id);
+    const result = await this.repository.restore({
+      id,
+      ...this.tenantScope(),
+    });
     if (!result.affected) {
       throw new ResourceNotFoundException(this.entityName, id);
+    }
+  }
+
+  /** True when this entity carries a `tenantId` column (extends TenantScopedEntity). */
+  private get isTenantScoped(): boolean {
+    return !!this.repository.metadata.findColumnWithPropertyName('tenantId');
+  }
+
+  /**
+   * Where-fragment restricting to the active tenant. Empty (no restriction) for
+   * non-scoped entities or when no tenant is active, so it's a no-op with
+   * `MULTI_TENANT=false`.
+   */
+  protected tenantScope(): FindOptionsWhere<T> {
+    const tenantId = getTenantId();
+    return this.isTenantScoped && tenantId ? ({ tenantId } as unknown as FindOptionsWhere<T>) : {};
+  }
+
+  /** Hook: constrain a query builder to the active tenant. */
+  protected applyTenantScope(qb: SelectQueryBuilder<T>): void {
+    const tenantId = getTenantId();
+    if (this.isTenantScoped && tenantId) {
+      qb.andWhere(`${this.alias}.tenantId = :tenantId`, { tenantId });
     }
   }
 
