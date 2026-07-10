@@ -63,7 +63,7 @@ Cross-cutting building blocks reused by every feature module.
 
 ## ✅ Phase 4 — Users module
 
-- [x] `User` entity (extends `BaseEntity`), soft delete, `provider`/`refreshTokenHash` fields ready for auth/OAuth
+- [x] `User` entity (extends `BaseEntity`), soft delete, `provider` field ready for auth/OAuth
 - [x] Request/response DTOs (`CreateUserDto`, `UpdateUserDto`, `UpdateProfileDto`, `UserResponseDto`) — separated from entity
 - [x] `UsersService` (extends `BaseCrudService`) + repo encapsulation, `findByEmail`, email-uniqueness guard
 - [x] `UsersController`: full CRUD + pagination/filters/sort via the generic base controller
@@ -80,7 +80,7 @@ Cross-cutting building blocks reused by every feature module.
 - [x] `argon2` password hashing (via shared `HashingService`)
 - [x] Passport strategies: `local`, `jwt` (access), `jwt-refresh` (cookie)
 - [x] Endpoints: `register`, `login`, `refresh`, `logout`, `me`
-- [x] Access + refresh token issuance; refresh via **httpOnly cookie**; refresh **rotation** + reuse detection (hash stored on user)
+- [x] Access + refresh token issuance; refresh via **httpOnly cookie**; refresh **rotation** + reuse detection (per-session rows in `refresh_tokens` — multi-device, see Hardening)
 - [x] `@Public()` decorator + **global `JwtAuthGuard`** (every route protected by default)
 - [x] Token revocation: `TokenBlacklistService` abstraction + DB impl (`revoked_tokens`), swappable to Redis in Phase 10
 - [x] Auth DTOs (`RegisterDto`, `LoginDto`, `AuthResponseDto`) + Swagger annotations; tighter throttle on login
@@ -165,3 +165,19 @@ Cross-cutting building blocks reused by every feature module.
 - [x] API versioning (`/v1`) — Phase 1
 - [ ] Response envelope `{ data, meta }` — Phase 3
 - [ ] Custom schematics / module generator — optional, post-1.0
+
+---
+
+## ✅ Post-1.0 hardening
+
+- [x] Multi-stage, non-root **`Dockerfile`** (deps + `dist/` only; starts Node directly for graceful shutdown)
+- [x] **Swagger disabled in production** unless `SWAGGER_ENABLED=true`
+- [x] Request **body-size limit** (`APP_BODY_LIMIT`, default `1mb`) on the json/urlencoded parsers
+- [x] Tighter per-endpoint throttles on `auth/register` (5/min) and `auth/refresh` (20/min)
+- [x] CI runs a **Redis service** and e2e with `REDIS_ENABLED=true`, exercising the Redis blacklist path
+- [x] `.nvmrc` pins Node 20
+- [x] **Multi-session refresh tokens**: dedicated `refresh_tokens` table (one row per device), concurrent
+      logins, per-session logout, and reuse detection that revokes the whole session family — access
+      tokens carry a `sid` claim so logout targets the exact session (migration `AddRefreshTokens`)
+- [x] **Verified**: lint clean, 24 unit + 14 e2e green (incl. new multi-session/reuse cases) against
+      Postgres, and 14/14 again with `REDIS_ENABLED=true`

@@ -34,7 +34,7 @@ export class UsersService extends BaseCrudService<User> {
   async findByEmail(email: string, withSecret = false): Promise<User | null> {
     const qb = this.repository.createQueryBuilder('user').where('user.email = :email', { email });
     if (withSecret) {
-      qb.addSelect(['user.password', 'user.refreshTokenHash']);
+      qb.addSelect(['user.password']);
     }
     return qb.getOne();
   }
@@ -50,11 +50,6 @@ export class UsersService extends BaseCrudService<User> {
   /** Update the caller's own profile (restricted field set). */
   async updateProfile(id: string, dto: UpdateProfileDto): Promise<User> {
     return this.update(id, dto);
-  }
-
-  /** Persist a new refresh-token hash (used by auth in Phase 5/10). */
-  async setRefreshTokenHash(id: string, hash: string | null): Promise<void> {
-    await this.repository.update(id, { refreshTokenHash: hash });
   }
 
   /** Find a user by OAuth provider + external id. */

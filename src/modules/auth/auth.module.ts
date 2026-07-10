@@ -17,6 +17,8 @@ import { GoogleStrategy } from './strategies/google.strategy';
 import { GithubStrategy } from './strategies/github.strategy';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from '../../shared/redis/redis.constants';
+import { RefreshToken } from './refresh-token/entities/refresh-token.entity';
+import { RefreshTokenService } from './refresh-token/refresh-token.service';
 import { RevokedToken } from './token-blacklist/entities/revoked-token.entity';
 import { DbTokenBlacklistService } from './token-blacklist/db-token-blacklist.service';
 import { RedisTokenBlacklistService } from './token-blacklist/redis-token-blacklist.service';
@@ -50,7 +52,7 @@ const oauthStrategyProviders: Provider[] = [
     UsersModule,
     AuthorizationModule,
     PassportModule,
-    TypeOrmModule.forFeature([RevokedToken]),
+    TypeOrmModule.forFeature([RevokedToken, RefreshToken]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService<AppConfigTree, true>) => {
@@ -65,6 +67,7 @@ const oauthStrategyProviders: Provider[] = [
   controllers: [AuthController, OAuthController],
   providers: [
     AuthService,
+    RefreshTokenService,
     LocalStrategy,
     JwtStrategy,
     JwtRefreshStrategy,

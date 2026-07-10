@@ -17,6 +17,7 @@ import { parseDurationToMs } from './auth.constants';
 import { RegisterDto } from './dto/register.dto';
 import { OAuthProfile } from './interfaces/oauth-profile.interface';
 import { IssuedTokens, JwtPayload } from './interfaces/jwt-payload.interface';
+import { RefreshTokenService } from './refresh-token/refresh-token.service';
 import { TokenBlacklistService } from './token-blacklist/token-blacklist.service';
 
 /** Role assigned to accounts created through self-registration. */
@@ -35,6 +36,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly hashing: HashingService,
     private readonly blacklist: TokenBlacklistService,
+    private readonly refreshTokens: RefreshTokenService,
     private readonly authorization: AuthorizationService,
   ) {}
 
@@ -64,23 +66,37 @@ export class AuthService {
     return { user: await this.usersService.findOne(principal.id), tokens };
   }
 
-  /** Validate a refresh token against the stored hash (used by the refresh strategy). */
+  /** Validate a refresh token against its session row (used by the refresh strategy). */
   async validateRefreshToken(payload: JwtPayload, token: string): Promise<AuthenticatedUser> {
-    const user = await this.usersService.findByEmail(payload.email, true);
-    if (!user || user.id !== payload.sub || !user.refreshTokenHash) {
+    // The JWT signature + expiry are already checked by the strategy; here we
+    // confirm the token still maps to an active session and matches its hash.
+    const session = await this.refreshTokens.findActive(payload.sub, payload.jti);
+    if (!session) {
+      // A validly-signed refresh token whose session is gone means it was
+      // already rotated/revoked → replay. Kill every session for the user.
+      await this.refreshTokens.revokeAllForUser(payload.sub);
+      throw new UnauthorizedBusinessException(
+        'Refresh token reuse detected',
+        ErrorCode.TOKEN_REVOKED,
+      );
+    }
+    if (!(await this.refreshTokens.matches(session, token))) {
+      await this.refreshTokens.revokeAllForUser(payload.sub);
+      throw new UnauthorizedBusinessException(
+        'Refresh token reuse detected',
+        ErrorCode.TOKEN_REVOKED,
+      );
+    }
+
+    const user = await this.usersService.findByEmail(payload.email);
+    if (!user || user.id !== payload.sub) {
       throw new UnauthorizedBusinessException(
         'Refresh token not recognized',
         ErrorCode.TOKEN_INVALID,
       );
     }
-    const matches = await this.hashing.verify(user.refreshTokenHash, token);
-    if (!matches) {
-      // The presented token doesn't match the last issued one → likely reuse.
-      await this.usersService.setRefreshTokenHash(user.id, null);
-      throw new UnauthorizedBusinessException(
-        'Refresh token reuse detected',
-        ErrorCode.TOKEN_REVOKED,
-      );
+    if (!user.isActive) {
+      throw new UnauthorizedBusinessException('Account is disabled');
     }
     return {
       id: user.id,
@@ -134,18 +150,25 @@ export class AuthService {
     return { user, tokens };
   }
 
-  /** Rotate tokens (new access + new refresh, replacing the stored hash). */
+  /** Rotate tokens: retire the presented session and open a fresh one. */
   async refresh(principal: AuthenticatedUser): Promise<AuthResult> {
+    // `principal.jti` here is the refresh token's jti = the session being rotated.
+    if (principal.jti) {
+      await this.refreshTokens.revoke(principal.jti);
+    }
     const tokens = await this.issueTokens(principal.id, principal.email);
     return { user: await this.usersService.findOne(principal.id), tokens };
   }
 
-  /** Revoke the current access token and invalidate the refresh token. */
+  /** Revoke the current access token and this session's refresh token only. */
   async logout(principal: AuthenticatedUser): Promise<void> {
     if (principal.jti && principal.tokenExp) {
       await this.blacklist.revoke(principal.jti, new Date(principal.tokenExp * 1000));
     }
-    await this.usersService.setRefreshTokenHash(principal.id, null);
+    // `sid` is the paired refresh session; other devices stay signed in.
+    if (principal.sid) {
+      await this.refreshTokens.revoke(principal.sid);
+    }
   }
 
   /** How long the refresh cookie should live (ms), derived from config. */
@@ -155,8 +178,17 @@ export class AuthService {
 
   private async issueTokens(userId: string, email: string): Promise<IssuedTokens> {
     const jwt = this.config.get('jwt', { infer: true });
-    const accessPayload: JwtPayload = { sub: userId, email, type: 'access', jti: uuidv4() };
-    const refreshPayload: JwtPayload = { sub: userId, email, type: 'refresh', jti: uuidv4() };
+    // One session id per issue: it's the refresh token's jti and rides on the
+    // access token as `sid`, so logout can revoke exactly this session.
+    const sessionId = uuidv4();
+    const accessPayload: JwtPayload = {
+      sub: userId,
+      email,
+      type: 'access',
+      jti: uuidv4(),
+      sid: sessionId,
+    };
+    const refreshPayload: JwtPayload = { sub: userId, email, type: 'refresh', jti: sessionId };
 
     // `expiresIn` accepts strings like '15m' at runtime; the jsonwebtoken types
     // model it as a branded StringValue, hence the cast.
@@ -174,7 +206,10 @@ export class AuthService {
       this.jwtService.signAsync(refreshPayload, refreshOptions),
     ]);
 
-    await this.usersService.setRefreshTokenHash(userId, await this.hashing.hash(refreshToken));
+    // Housekeeping: clear this user's expired sessions before adding a new one.
+    await this.refreshTokens.pruneExpired(userId);
+    const expiresAt = new Date(Date.now() + this.refreshCookieMaxAgeMs);
+    await this.refreshTokens.issue(userId, sessionId, refreshToken, expiresAt);
     return { accessToken, refreshToken };
   }
 }

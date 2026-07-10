@@ -151,4 +151,64 @@ describe('Template API (e2e)', () => {
       expect(after.body.code).toBe('TOKEN_REVOKED');
     });
   });
+
+  describe('multi-session refresh tokens', () => {
+    const login = () =>
+      request(http).post('/api/v1/auth/login').send({ email: userEmail, password }).expect(200);
+
+    it('keeps existing sessions alive after logging in again (multi-device)', async () => {
+      const first = await login();
+      const firstCookie = first.headers['set-cookie'];
+
+      // A second login opens a separate session; it must NOT invalidate the first.
+      await login();
+
+      await request(http).post('/api/v1/auth/refresh').set('Cookie', firstCookie).expect(200);
+    });
+
+    it('logging out one session leaves the others usable', async () => {
+      const a = await login();
+      const b = await login();
+      const cookieA = a.headers['set-cookie'];
+      const tokenB = b.body.data.accessToken as string;
+      const cookieB = b.headers['set-cookie'];
+
+      // Log out session B.
+      await request(http)
+        .post('/api/v1/auth/logout')
+        .set('Authorization', `Bearer ${tokenB}`)
+        .set('Cookie', cookieB)
+        .expect(204);
+
+      // B's access token is now revoked...
+      await request(http)
+        .get('/api/v1/auth/me')
+        .set('Authorization', `Bearer ${tokenB}`)
+        .expect(401);
+      // ...while session A keeps working.
+      await request(http).post('/api/v1/auth/refresh').set('Cookie', cookieA).expect(200);
+    });
+
+    it('detects reuse of a rotated refresh token and revokes the session family', async () => {
+      const session = await login();
+      const oldCookie = session.headers['set-cookie'];
+
+      // Rotate once: the old cookie is now spent, a new one is issued.
+      const rotated = await request(http)
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', oldCookie)
+        .expect(200);
+      const newCookie = rotated.headers['set-cookie'];
+
+      // Replaying the OLD cookie is treated as reuse.
+      const replay = await request(http)
+        .post('/api/v1/auth/refresh')
+        .set('Cookie', oldCookie)
+        .expect(401);
+      expect(replay.body.code).toBe('TOKEN_REVOKED');
+
+      // Reuse detection revokes the whole family, so the rotated cookie dies too.
+      await request(http).post('/api/v1/auth/refresh').set('Cookie', newCookie).expect(401);
+    });
+  });
 });

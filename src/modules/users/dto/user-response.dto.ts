@@ -2,9 +2,9 @@ import { ApiProperty } from '@nestjs/swagger';
 import { AuthProvider } from '../entities/user.entity';
 
 /**
- * Shape returned to clients. Sensitive columns (password, refreshTokenHash,
- * providerId, deletedAt, version) are omitted here and also `@Exclude()`d on the
- * entity, so responses are safe whether an entity or this DTO is serialized.
+ * Shape returned to clients. Sensitive columns (password, providerId,
+ * deletedAt, version) are omitted here and also `@Exclude()`d on the entity, so
+ * responses are safe whether an entity or this DTO is serialized.
  */
 export class UserResponseDto {
   @ApiProperty({ format: 'uuid' })

@@ -44,10 +44,8 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   providerId: string | null;
 
-  /** Hash of the current refresh token, for rotation/revocation (Phase 5/10). */
-  @Exclude()
-  @Column({ type: 'varchar', length: 255, nullable: true, select: false })
-  refreshTokenHash: string | null;
+  // Refresh tokens live in their own `refresh_tokens` table (one row per
+  // session/device) — see RefreshTokenService — not as a column here.
 
   // User owns the join table (unidirectional): assign roles from the user side.
   // Not eager — only loaded when explicitly requested (e.g. building the JWT principal).

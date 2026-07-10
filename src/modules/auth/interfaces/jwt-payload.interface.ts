@@ -6,8 +6,11 @@ export interface JwtPayload {
   sub: string;
   email: string;
   type: TokenType;
-  /** Unique token id, used for blacklist-based revocation. */
+  /** Unique token id. On refresh tokens it also keys the session row. */
   jti: string;
+  /** Session id (the paired refresh token's jti), present on access tokens so
+   *  logout can revoke that exact session. */
+  sid?: string;
   iat?: number;
   exp?: number;
 }

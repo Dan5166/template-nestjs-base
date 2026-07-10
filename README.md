@@ -16,7 +16,7 @@ tooling/security/observability setup.
 | Framework          | NestJS 11                                     |
 | Language           | TypeScript (strict mode)                      |
 | ORM / DB           | TypeORM + PostgreSQL                          |
-| Auth               | Passport (JWT + local), argon2 hashing        |
+| Auth               | Passport (JWT + local), argon2 hashing, multi-session refresh rotation |
 | Authorization      | RBAC (`@Roles()`) + PBAC (`@RequirePermissions()`) |
 | Config validation  | `@nestjs/config` + Joi                        |
 | Logging            | Pino (`nestjs-pino`)                          |
@@ -216,6 +216,9 @@ Run these (in Swagger or PowerShell) to confirm each part of the template works:
 | Soft delete | `DELETE /users/:id` then `GET /users/:id` | `204`, then `404` |
 | Restore | `PATCH /users/:id/restore` | `200` |
 | Token revocation | `logout`, then reuse that access token | `401` `TOKEN_REVOKED` |
+| Multi-session | log in twice, `refresh` with the **first** session's cookie | `200` (both sessions live) |
+| Per-session logout | `logout` one session; the other's access token | still `200` on `/auth/me` |
+| Refresh reuse detection | rotate via `refresh`, then replay the **old** cookie | `401` `TOKEN_REVOKED` (family revoked) |
 | Error shape | trigger any error | `{ statusCode, code, message, timestamp, path, method }` |
 
 ### 7. Inspect the database directly

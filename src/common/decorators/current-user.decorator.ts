@@ -12,6 +12,9 @@ export interface AuthenticatedUser {
   permissions: string[];
   /** Access-token id (jti) of the request's token — used to revoke on logout. */
   jti?: string;
+  /** Session id (paired refresh token's jti) — used to revoke the refresh
+   *  session on logout. Present on access-token principals. */
+  sid?: string;
   /** Access-token expiry (epoch seconds) — the revocation TTL. */
   tokenExp?: number;
 }
