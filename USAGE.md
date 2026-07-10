@@ -1,24 +1,24 @@
-# Using this repo as a template
+# Usar este repo como plantilla
 
-A step-by-step guide to spin up a **new project** from this base. Commands are shown for
-**Windows / PowerShell** (the environment this template was built on); bash equivalents are
-noted where they differ.
+Guía paso a paso para arrancar un **proyecto nuevo** desde esta base. Los comandos se muestran para
+**Windows / PowerShell** (el entorno en el que se construyó esta plantilla); se anotan los equivalentes
+en bash donde difieren.
 
-> The template is **complete (all 11 phases)** — see [ROADMAP.md](./ROADMAP.md) for the full
-> feature list. This guide covers taking it as a base for a new project: rename, configure,
-> initialize the DB, add a feature module, and turn on the optional pieces (OAuth, Redis,
-> multi-tenancy). For day-to-day API testing (auth flow, Swagger, PowerShell examples) see the
-> [README](./README.md).
+> La plantilla está **completa (las 11 fases)** — ver [ROADMAP.md](./ROADMAP.md) para la lista completa
+> de features. Esta guía cubre tomarla como base para un proyecto nuevo: renombrar, configurar,
+> inicializar la BD, añadir un módulo de feature y activar las piezas opcionales (OAuth, Redis,
+> multi-tenancy). Para las pruebas del día a día de la API (flujo de auth, Swagger, ejemplos de PowerShell)
+> ver el [README](./README.md).
 
 ---
 
-## 1. Get the code into a fresh project
+## 1. Meter el código en un proyecto nuevo
 
-Copy the template and start a clean git history (so your new project doesn't carry this repo's
-commits):
+Copia la plantilla y arranca un historial de git limpio (para que tu proyecto nuevo no arrastre los
+commits de este repo):
 
 ```powershell
-# Copy the folder (or clone, then remove .git)
+# Copia la carpeta (o clona y luego elimina .git)
 Copy-Item -Recurse .\template .\my-new-api
 cd .\my-new-api
 Remove-Item -Recurse -Force .git
@@ -29,18 +29,18 @@ git init
 
 ---
 
-## 2. Rename the project
+## 2. Renombrar el proyecto
 
-The name `template` appears in a few places. Replace it with your project name (e.g. `my-api`):
+El nombre `template` aparece en algunos sitios. Reemplázalo con el nombre de tu proyecto (p. ej. `my-api`):
 
-| File | What to change |
+| Archivo | Qué cambiar |
 | --- | --- |
 | `package.json` | `"name"`, `"description"`, `"author"` |
-| `README.md` | Title and description |
-| `docker-compose.yml` | `container_name: template_postgres` / `template_redis` → your prefix |
+| `README.md` | Título y descripción |
+| `docker-compose.yml` | `container_name: template_postgres` / `template_redis` → tu prefijo |
 | `.env` / `.env.example` | `APP_NAME`, `DB_DATABASE` |
 
-Quick find of remaining references:
+Búsqueda rápida de referencias restantes:
 
 ```powershell
 Select-String -Path .\src\*, .\*.json, .\*.yml -Pattern "template" -SimpleMatch
@@ -48,77 +48,77 @@ Select-String -Path .\src\*, .\*.json, .\*.yml -Pattern "template" -SimpleMatch
 
 > bash: `grep -rn "template" src *.json *.yml`
 
-Nothing in `src/` hard-codes the name (it reads `APP_NAME` from config), so renaming is mostly
-cosmetic + Docker container names + the database name.
+Nada en `src/` codifica el nombre a mano (lo lee de `APP_NAME` en la config), así que renombrar es
+mayormente cosmético + los nombres de contenedores Docker + el nombre de la base de datos.
 
 ---
 
-## 3. Create and configure your `.env`
+## 3. Crear y configurar tu `.env`
 
 ```powershell
 Copy-Item .env.example .env
 ```
 
-Then edit `.env`. The variables you'll almost always touch:
+Luego edita `.env`. Las variables que casi siempre vas a tocar:
 
-| Variable | Notes |
+| Variable | Notas |
 | --- | --- |
-| `APP_NAME` | Your app's name (shown in logs and `GET /`) |
-| `APP_PORT` | HTTP port (default `3000`) |
-| `CORS_ORIGINS` | `*` in dev; a comma-separated allow-list in prod |
-| `DB_DATABASE` | Your database name |
-| `DB_PORT` | `5432` by default; use `5433` if a local Postgres already owns 5432 |
-| `DB_USERNAME` / `DB_PASSWORD` | DB credentials |
-| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | **Generate strong secrets — see below** |
+| `APP_NAME` | El nombre de tu app (se muestra en los logs y en `GET /`) |
+| `APP_PORT` | Puerto HTTP (default `3000`) |
+| `CORS_ORIGINS` | `*` en dev; una allow-list separada por comas en prod |
+| `DB_DATABASE` | El nombre de tu base de datos |
+| `DB_PORT` | `5432` por defecto; usa `5433` si un Postgres local ya ocupa el 5432 |
+| `DB_USERNAME` / `DB_PASSWORD` | Credenciales de la BD |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | **Genera secretos fuertes — ver abajo** |
 
-The app **validates every variable on startup (Joi)** and refuses to boot if one is missing or
-invalid — so a misconfigured `.env` fails fast with a clear message.
+La app **valida cada variable al arrancar (Joi)** y se niega a levantar si falta una o es inválida —
+así un `.env` mal configurado falla rápido con un mensaje claro.
 
-### Generate JWT secrets
+### Generar secretos JWT
 
 ```powershell
 node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
 ```
 
-Run it twice and paste the values into `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET`.
-Never commit `.env` (it's git-ignored); commit only `.env.example`.
+Ejecútalo dos veces y pega los valores en `JWT_ACCESS_SECRET` y `JWT_REFRESH_SECRET`.
+Nunca commitees `.env` (está en gitignore); commitea solo `.env.example`.
 
 ---
 
-## 4. Start the database and initialize
+## 4. Arrancar la base de datos e inicializar
 
 ```powershell
-docker compose up -d postgres   # or: docker compose up -d   (also starts Redis)
+docker compose up -d postgres   # o: docker compose up -d   (también arranca Redis)
 npm install
-npm run migration:run           # apply migrations
-npm run seed                    # seed base roles/permissions + admin user (SEED_ADMIN_*)
+npm run migration:run           # aplicar migraciones
+npm run seed                    # sembrar roles/permisos base + usuario admin (SEED_ADMIN_*)
 ```
 
-> If you renamed `DB_DATABASE`, the container creates that database automatically on first run
-> (it reads `DB_DATABASE` via docker-compose). If you had already started the container under
-> the old name, recreate it: `docker compose down -v; docker compose up -d postgres`
-> (⚠️ `-v` wipes the volume/data).
+> Si renombraste `DB_DATABASE`, el contenedor crea esa base de datos automáticamente en el primer
+> arranque (lee `DB_DATABASE` vía docker-compose). Si ya habías arrancado el contenedor con el nombre
+> viejo, recréalo: `docker compose down -v; docker compose up -d postgres`
+> (⚠️ `-v` borra el volumen/los datos).
 
 ---
 
-## 5. Run it
+## 5. Ejecutarlo
 
 ```powershell
 npm run start:dev
 ```
 
-API: `http://localhost:3000/api/v1`. See the
-[Manual testing section in the README](./README.md#manual-testing-windows--powershell) for how
-to exercise the endpoints from PowerShell.
+API: `http://localhost:3000/api/v1`. Ver la
+[sección de Pruebas manuales en el README](./README.md#pruebas-manuales-windows--powershell) para saber
+cómo ejercitar los endpoints desde PowerShell.
 
 ---
 
-## 6. Add your first feature module
+## 6. Añadir tu primer módulo de feature
 
-The template gives you generic CRUD so a new resource is mostly wiring. Example — a `Product`
-resource:
+La plantilla te da un CRUD genérico, así que un recurso nuevo es mayormente cableado. Ejemplo — un
+recurso `Product`:
 
-**1) Entity** — extend `BaseEntity` (gives `id`, timestamps, soft delete, version):
+**1) Entity** — extiende `BaseEntity` (te da `id`, timestamps, soft delete, version):
 
 ```ts
 // src/modules/products/entities/product.entity.ts
@@ -135,7 +135,7 @@ export class Product extends BaseEntity {
 }
 ```
 
-**2) DTOs** — request DTOs separate from the entity:
+**2) DTOs** — DTOs de request separados de la entity:
 
 ```ts
 // create-product.dto.ts
@@ -149,7 +149,7 @@ import { PartialType } from '@nestjs/swagger';
 export class UpdateProductDto extends PartialType(CreateProductDto) {}
 ```
 
-**3) Service** — extend `BaseCrudService` and declare searchable/sortable fields:
+**3) Service** — extiende `BaseCrudService` y declara los campos buscables/ordenables:
 
 ```ts
 @Injectable()
@@ -163,8 +163,8 @@ export class ProductsService extends BaseCrudService<Product> {
 }
 ```
 
-**4) Controller** — extend the generic `BaseCrudController`. Optionally guard each
-action with a granular permission (PBAC):
+**4) Controller** — extiende el `BaseCrudController` genérico. Opcionalmente protege cada
+acción con un permiso granular (PBAC):
 
 ```ts
 @ApiBearerAuth()
@@ -186,64 +186,65 @@ export class ProductsController extends BaseCrudController<Product, CreateProduc
 }
 ```
 
-You get for free: `POST /products`, `GET /products` (paginated + `?search=&sortBy=&order=`),
+Obtienes gratis: `POST /products`, `GET /products` (paginado + `?search=&sortBy=&order=`),
 `GET /products/:id`, `PATCH /products/:id`, `DELETE /products/:id` (soft), `PATCH /products/:id/restore`.
 
-**Authorization:** every route already requires a valid access token (global `JwtAuthGuard`).
-Add `@Public()` to open a route, `@Roles('admin')` to gate by role, or
-`@RequirePermissions('products:create')` for granular control. Seed baseline permissions in the
-RBAC seeder (`src/database/seeds/rbac.seeder.ts`) so a fresh DB has them; at runtime you can also
-manage roles and permissions through the API (below).
+**Autorización:** toda ruta ya requiere un access token válido (`JwtAuthGuard` global).
+Añade `@Public()` para abrir una ruta, `@Roles('admin')` para restringir por rol, o
+`@RequirePermissions('products:create')` para control granular. Siembra los permisos base en el
+seeder de RBAC (`src/database/seeds/rbac.seeder.ts`) para que una BD nueva los tenga; en runtime también
+puedes gestionar roles y permisos a través de la API (abajo).
 
-### Managing roles & permissions via the API
+### Gestionar roles y permisos vía la API
 
-The `admin` role can manage RBAC through REST endpoints (all require the matching
-`roles:*` / `permissions:*` / `users:assign-roles` permission):
+El rol `admin` puede gestionar RBAC a través de endpoints REST (todos requieren el permiso
+`roles:*` / `permissions:*` / `users:assign-roles` correspondiente):
 
-| Endpoint | Purpose |
+| Endpoint | Propósito |
 | --- | --- |
-| `GET/POST /roles`, `GET/PATCH/DELETE /roles/:id` | CRUD roles; `POST`/`PATCH` accept `permissions: string[]` (names) to set the role's grants |
-| `GET/POST /permissions`, `DELETE /permissions/:id` | List/create/delete permissions (`{ resource, action }` → `resource:action`) |
-| `GET/POST /users/:userId/roles`, `DELETE /users/:userId/roles/:roleName` | Read / assign / remove a user's roles |
+| `GET/POST /roles`, `GET/PATCH/DELETE /roles/:id` | CRUD de roles; `POST`/`PATCH` aceptan `permissions: string[]` (nombres) para fijar los grants del rol |
+| `GET/POST /permissions`, `DELETE /permissions/:id` | Listar/crear/borrar permisos (`{ resource, action }` → `resource:action`) |
+| `GET/POST /users/:userId/roles`, `DELETE /users/:userId/roles/:roleName` | Leer / asignar / quitar los roles de un usuario |
 
-> Permission changes take effect on the user's **next login** (the principal's roles/permissions
-> are baked into the access token at sign-in and resolved fresh each request from the token's
-> identity). Seed defaults still live in code so a new environment is reproducible.
+> Los cambios de permisos surten efecto en el **siguiente login** del usuario (los roles/permisos del
+> principal se incrustan en el access token al iniciar sesión y se resuelven en fresco en cada petición
+> desde la identidad del token). Los defaults sembrados siguen viviendo en código para que un entorno
+> nuevo sea reproducible.
 
-**5) Module + register** — `TypeOrmModule.forFeature([Product])`, then add `ProductsModule` to
+**5) Module + registro** — `TypeOrmModule.forFeature([Product])`, luego añade `ProductsModule` a
 `AppModule`.
 
-**6) Migration** — generate and run:
+**6) Migración** — genera y ejecuta:
 
 ```powershell
 npm run migration:generate -- src/database/migrations/CreateProducts
 npm run migration:run
 ```
 
-> `MeController` in the users module shows how to add **custom** routes alongside the generic
-> ones (and why literal routes like `/me` are registered before `/:id`).
+> El `MeController` en el módulo de usuarios muestra cómo añadir rutas **personalizadas** junto a las
+> genéricas (y por qué rutas literales como `/me` se registran antes que `/:id`).
 
 ---
 
-## 7. Enabling multi-tenancy (optional)
+## 7. Activar multi-tenancy (opcional)
 
-The template ships **tenancy that is off by default** (`MULTI_TENANT=false`), so it adds zero
-behavior until you opt in. What's already wired:
+La plantilla trae **tenancy apagado por defecto** (`MULTI_TENANT=false`), así que no añade ningún
+comportamiento hasta que optas por él. Lo que ya está cableado:
 
-- `TenantMiddleware` — establishes an AsyncLocalStorage context per request; when enabled it
-  resolves the tenant from the `X-Tenant-ID` header → sub-domain → JWT `tenantId` claim.
-- `TenantContextService` (`getTenantId()`) / `getTenantId()` helper — read the active tenant
-  anywhere, with or without DI.
-- `@Tenant()` — param decorator to inject the tenant id into a handler.
-- `TenantScopedEntity` — extend it (instead of `BaseEntity`) to make a resource tenant-scoped.
-- `TenantSubscriber` — stamps `tenantId` on insert for scoped entities.
-- `BaseCrudService` — automatically filters reads/updates/deletes to the active tenant for
-  scoped entities.
+- `TenantMiddleware` — establece un contexto de AsyncLocalStorage por petición; cuando está activo
+  resuelve el tenant desde la cabecera `X-Tenant-ID` → sub-dominio → claim `tenantId` del JWT.
+- `TenantContextService` (`getTenantId()`) / helper `getTenantId()` — lee el tenant activo desde
+  cualquier lado, con o sin DI.
+- `@Tenant()` — decorator de parámetro para inyectar el id del tenant en un handler.
+- `TenantScopedEntity` — extiéndela (en vez de `BaseEntity`) para hacer un recurso tenant-scoped.
+- `TenantSubscriber` — estampa `tenantId` en el insert de las entidades scoped.
+- `BaseCrudService` — filtra automáticamente lecturas/updates/deletes al tenant activo para las
+  entidades scoped.
 
-Turning on real data isolation (shared-DB, `tenantId`-column strategy) is now two steps:
+Activar el aislamiento de datos real (BD compartida, estrategia de columna `tenantId`) son ahora dos pasos:
 
-1. **Enable the flag:** `MULTI_TENANT=true` in `.env`.
-2. **Make the resource tenant-scoped** — extend `TenantScopedEntity` instead of `BaseEntity`:
+1. **Activa el flag:** `MULTI_TENANT=true` en `.env`.
+2. **Haz el recurso tenant-scoped** — extiende `TenantScopedEntity` en vez de `BaseEntity`:
 
    ```ts
    @Entity('invoices')
@@ -251,39 +252,39 @@ Turning on real data isolation (shared-DB, `tenantId`-column strategy) is now tw
      @Column() amount: number;
    }
    ```
-   Generate + run a migration (adds the `tenant_id` column + index). That's it — any service
-   extending `BaseCrudService` now stamps the tenant on create and scopes every
-   `findAll/findOne/update/remove/restore` to it. Global tables (users, roles, permissions) keep
-   extending `BaseEntity` and stay shared.
+   Genera + ejecuta una migración (añade la columna `tenant_id` + índice). Eso es todo — cualquier
+   service que extienda `BaseCrudService` ahora estampa el tenant en el create y limita cada
+   `findAll/findOne/update/remove/restore` a él. Las tablas globales (users, roles, permissions) siguen
+   extendiendo `BaseEntity` y se mantienen compartidas.
 
-3. **Choose how tenants are identified** — override `TenantMiddleware.resolveTenant()` if you
-   don't use the `X-Tenant-ID` header (e.g. always the JWT claim).
+3. **Elige cómo se identifican los tenants** — sobreescribe `TenantMiddleware.resolveTenant()` si no
+   usas la cabecera `X-Tenant-ID` (p. ej. siempre el claim del JWT).
 
-> **Custom queries:** only CRUD that goes through `BaseCrudService` is auto-scoped. If you write
-> your own repository/query-builder calls against a scoped entity, add the filter yourself with
-> `getTenantId()` (or `TenantContextService`) — e.g. `qb.andWhere('e.tenantId = :t', { t })`.
+> **Queries personalizadas:** solo el CRUD que pasa por `BaseCrudService` se auto-scopea. Si escribes tus
+> propias llamadas de repository/query-builder contra una entidad scoped, añade el filtro tú mismo con
+> `getTenantId()` (o `TenantContextService`) — p. ej. `qb.andWhere('e.tenantId = :t', { t })`.
 
-Verify quickly: with `MULTI_TENANT=true`, `GET /api/v1` echoes the resolved tenant
+Verifícalo rápido: con `MULTI_TENANT=true`, `GET /api/v1` devuelve el tenant resuelto
 (`curl -H "X-Tenant-ID: acme" http://localhost:3000/api/v1` → `"tenant":"acme"`).
 
-## 8. Optional features (feature flags)
+## 8. Features opcionales (feature flags)
 
-Everything below is **off by default** and flips on via `.env` — no code changes needed:
+Todo lo de abajo está **apagado por defecto** y se activa vía `.env` — sin cambios de código:
 
-| Feature | Enable with | Then |
+| Feature | Activar con | Entonces |
 | --- | --- | --- |
-| **Redis** token blacklist (native TTL) | `REDIS_ENABLED=true` (+ `docker compose up -d redis`) | Logout/revocation moves from Postgres to Redis automatically; `/api/health` reports `redis`. |
-| **OAuth** (Google / GitHub) | `OAUTH_ENABLED=true` + provider `*_CLIENT_ID` / `*_CLIENT_SECRET` / `*_CALLBACK_URL` | `/api/v1/auth/google` and `/auth/github` become live (302 → provider). |
-| **Multi-tenancy** | `MULTI_TENANT=true` | See §7 above. |
+| **Redis** blacklist de tokens (TTL nativo) | `REDIS_ENABLED=true` (+ `docker compose up -d redis`) | Logout/revocación se mueve de Postgres a Redis automáticamente; `/api/health` reporta `redis`. |
+| **OAuth** (Google / GitHub) | `OAUTH_ENABLED=true` + `*_CLIENT_ID` / `*_CLIENT_SECRET` / `*_CALLBACK_URL` del proveedor | `/api/v1/auth/google` y `/auth/github` se activan (302 → proveedor). |
+| **Multi-tenancy** | `MULTI_TENANT=true` | Ver §7 arriba. |
 
-### Error reporting / observability
+### Reporte de errores / observabilidad
 
-Server errors (5xx) are always logged, and the `AllExceptionsFilter` also hands them to a pluggable
-`ErrorReporter`. The default is a **no-op** (nothing leaves the app), so wiring an external tracker
-is just binding your own implementation to the `ERROR_REPORTER` token — no filter changes.
+Los errores de servidor (5xx) siempre se loguean, y el `AllExceptionsFilter` además los pasa a un
+`ErrorReporter` pluggable. El default es un **no-op** (nada sale de la app), así que cablear un tracker
+externo es solo enlazar tu propia implementación al token `ERROR_REPORTER` — sin cambios en el filtro.
 
-1. Install your SDK (e.g. `npm i @sentry/node`) and init it once in `main.ts` before `listen()`.
-2. Implement the reporter and rebind the token in `ObservabilityModule`:
+1. Instala tu SDK (p. ej. `npm i @sentry/node`) e inicialízalo una vez en `main.ts` antes de `listen()`.
+2. Implementa el reporter y reenlaza el token en `ObservabilityModule`:
 
    ```ts
    // src/common/observability/sentry-error-reporter.ts
@@ -306,45 +307,45 @@ is just binding your own implementation to the `ERROR_REPORTER` token — no fil
    providers: [{ provide: ERROR_REPORTER, useClass: SentryErrorReporter }],
    ```
 
-Only `statusCode >= 500` reaches the reporter (expected 4xx client errors are not noise), and a
-reporter that throws is caught so it can never break the response.
+Solo `statusCode >= 500` llega al reporter (los errores de cliente 4xx esperados no son ruido), y un
+reporter que lance excepción se captura para que nunca rompa la respuesta.
 
-## 9. Where to look for common tasks
+## 9. Dónde buscar tareas comunes
 
-| I want to… | Look at |
+| Quiero… | Mira |
 | --- | --- |
-| Get a token / test the auth flow | [README → Manual testing](./README.md#manual-testing-windows--powershell) |
-| Explore endpoints in the browser | Swagger UI at `http://localhost:3000/api/docs` |
-| Add a protected resource | §6 above (generic CRUD + `@RequirePermissions`) |
-| Add roles/permissions | `src/database/seeds/rbac.seeder.ts`, then `npm run seed` |
-| Change token lifetimes / secrets | `.env` (`JWT_*`) |
-| Run tests | `npm test` (unit) · `npm run test:e2e` — see [README → Testing](./README.md#testing) |
-| See what's implemented | [ROADMAP.md](./ROADMAP.md) |
+| Obtener un token / probar el flujo de auth | [README → Pruebas manuales](./README.md#pruebas-manuales-windows--powershell) |
+| Explorar endpoints en el navegador | Swagger UI en `http://localhost:3000/api/docs` |
+| Añadir un recurso protegido | §6 arriba (CRUD genérico + `@RequirePermissions`) |
+| Añadir roles/permisos | `src/database/seeds/rbac.seeder.ts`, luego `npm run seed` |
+| Cambiar tiempos de vida / secretos de tokens | `.env` (`JWT_*`) |
+| Ejecutar tests | `npm test` (unit) · `npm run test:e2e` — ver [README → Pruebas](./README.md#pruebas) |
+| Ver qué está implementado | [ROADMAP.md](./ROADMAP.md) |
 
-## 10. Before going to production (checklist)
+## 10. Antes de ir a producción (checklist)
 
-- [ ] Real, unique `JWT_*` secrets (not the `.env.example` placeholders).
-- [ ] `DB_SYNCHRONIZE=false` (always use migrations — it's the default).
-- [ ] `CORS_ORIGINS` set to your real front-end origin(s), not `*`.
-- [ ] `LOG_PRETTY=false` (JSON logs) and an appropriate `LOG_LEVEL`.
-- [ ] Rotate `SEED_ADMIN_PASSWORD` or delete the seeded admin after creating real accounts.
-- [ ] Review rate limits — global `THROTTLE_*` plus the per-endpoint limits on `auth/*`.
-- [ ] `NODE_ENV=production` (this also **disables Swagger** unless `SWAGGER_ENABLED=true`).
-- [ ] Set `APP_BODY_LIMIT` to the smallest size your API needs (default `1mb`).
-- [ ] Build and ship the production image — `docker build -t my-api .` (see
-      [README → Deployment](./README.md#deployment)).
+- [ ] Secretos `JWT_*` reales y únicos (no los placeholders de `.env.example`).
+- [ ] `DB_SYNCHRONIZE=false` (siempre usa migraciones — es el default).
+- [ ] `CORS_ORIGINS` apuntando a tu(s) origen(es) de front-end real(es), no `*`.
+- [ ] `LOG_PRETTY=false` (logs en JSON) y un `LOG_LEVEL` apropiado.
+- [ ] Rotar `SEED_ADMIN_PASSWORD` o borrar el admin sembrado tras crear cuentas reales.
+- [ ] Revisar los límites de tasa — `THROTTLE_*` global más los límites por endpoint en `auth/*`.
+- [ ] `NODE_ENV=production` (esto además **deshabilita Swagger** salvo que `SWAGGER_ENABLED=true`).
+- [ ] Poner `APP_BODY_LIMIT` en el tamaño más pequeño que tu API necesite (default `1mb`).
+- [ ] Construir y desplegar la imagen de producción — `docker build -t my-api .` (ver
+      [README → Despliegue](./README.md#despliegue)).
 
 ---
 
-## Where things live
+## Dónde vive cada cosa
 
 ```
 src/
-├── config/     # env validation (Joi) + typed config namespaces
-├── common/     # base entity, exception filter, interceptors, pagination, BaseCrud*
-├── database/   # data-source, migrations, seeds
-├── shared/     # cross-module providers (e.g. HashingService)
-└── modules/    # your feature modules (users, ...)
+├── config/     # validación de env (Joi) + namespaces de config tipados
+├── common/     # base entity, exception filter, interceptors, paginación, BaseCrud*
+├── database/   # data-source, migraciones, seeds
+├── shared/     # providers entre módulos (p. ej. HashingService)
+└── modules/    # tus módulos de feature (users, ...)
 ```
 
-For the full picture of what's implemented vs pending, see [ROADMAP.md](./ROADMAP.md).
+Para el panorama completo de lo implementado vs pendiente, ver [ROADMAP.md](./ROADMAP.md).

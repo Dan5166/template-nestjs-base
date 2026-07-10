@@ -1,188 +1,188 @@
-# 🗺️ Roadmap — template (NestJS base)
+# 🗺️ Roadmap — template (base NestJS)
 
-Delivery is **phased**. Each phase is self-contained, compiles, and (where applicable) boots.
-Legend: ✅ done · 🚧 in progress · ⬜ pending
+La entrega es **por fases**. Cada fase es autocontenida, compila y (cuando aplica) levanta.
+Leyenda: ✅ hecho · 🚧 en progreso · ⬜ pendiente
 
-**Status: 11 / 11 phases complete. 🎉**
+**Estado: 11 / 11 fases completas. 🎉**
 
-**Decisions (locked):** TypeORM · PostgreSQL · Joi · Pino · OAuth Google/GitHub · RBAC + **PBAC** (granular permissions) · project name `template`.
+**Decisiones (fijadas):** TypeORM · PostgreSQL · Joi · Pino · OAuth Google/GitHub · RBAC + **PBAC** (permisos granulares) · nombre del proyecto `template`.
 
 ---
 
-## ✅ Phase 1 — Foundation
+## ✅ Fase 1 — Foundation
 
-Project skeleton, strict TypeScript, tooling, validated config, secure bootstrap.
+Esqueleto del proyecto, TypeScript estricto, tooling, config validada, bootstrap seguro.
 
-- [x] NestJS 11 project (`package.json` with full dependency set)
-- [x] TypeScript **strict mode** (`noImplicitAny`, `noUnusedLocals/Parameters`, `noImplicitReturns`, `noImplicitOverride`, path alias `src/*`)
-- [x] Folder structure: `config/`, `common/`, `database/`, `shared/`, `modules/`
-- [x] `@nestjs/config` global + **Joi** validation (fail-fast)
-- [x] Namespaced typed config: `app`, `database`, `jwt`, `throttle`, `redis`, `oauth`, `log`, `seed`
-- [x] `main.ts`: Helmet · CORS · cookie-parser · URI versioning (`/api/v1`) · global prefix · `ValidationPipe` (whitelist + forbidNonWhitelisted + transform) · `ClassSerializerInterceptor` · shutdown hooks
-- [x] `@nestjs/throttler` as global rate-limit guard
+- [x] Proyecto NestJS 11 (`package.json` con el set completo de dependencias)
+- [x] TypeScript **modo estricto** (`noImplicitAny`, `noUnusedLocals/Parameters`, `noImplicitReturns`, `noImplicitOverride`, path alias `src/*`)
+- [x] Estructura de carpetas: `config/`, `common/`, `database/`, `shared/`, `modules/`
+- [x] `@nestjs/config` global + validación **Joi** (fail-fast)
+- [x] Config tipada por namespaces: `app`, `database`, `jwt`, `throttle`, `redis`, `oauth`, `log`, `seed`
+- [x] `main.ts`: Helmet · CORS · cookie-parser · versionado por URI (`/api/v1`) · prefijo global · `ValidationPipe` (whitelist + forbidNonWhitelisted + transform) · `ClassSerializerInterceptor` · shutdown hooks
+- [x] `@nestjs/throttler` como guard global de rate-limit
 - [x] ESLint 9 (flat, type-checked) + Prettier + `.editorconfig`
-- [x] Husky v9 hooks: `pre-commit` (lint-staged) + `commit-msg` (commitlint / conventional commits)
+- [x] Hooks de Husky v9: `pre-commit` (lint-staged) + `commit-msg` (commitlint / conventional commits)
 - [x] `.env.example` + `.env`, `README.md`
-- [x] **Verified:** build OK, boots, `GET /api/v1` responds, Joi fail-fast tested
+- [x] **Verificado:** build OK, levanta, `GET /api/v1` responde, fail-fast de Joi probado
 
 ---
 
-## ✅ Phase 2 — Database
+## ✅ Fase 2 — Database
 
-TypeORM + PostgreSQL, base entity, migrations, containers.
+TypeORM + PostgreSQL, base entity, migraciones, contenedores.
 
-- [x] `TypeOrmModule.forRootAsync` wired to config (`DatabaseModule`, `autoLoadEntities`)
-- [x] `src/database/data-source.ts` for the TypeORM CLI (migrations)
-- [x] Shared options builder (`typeorm-options.ts`) so runtime & CLI never drift
-- [x] Abstract **`BaseEntity`**: `id` (UUID) · `createdAt` · `updatedAt` · `deletedAt` (soft delete) · `version`
-- [x] Migrations setup + npm scripts (`migration:generate/run/revert`)
-- [x] `docker-compose.yml`: PostgreSQL (+ Redis service, wired in Phase 10)
+- [x] `TypeOrmModule.forRootAsync` cableado a la config (`DatabaseModule`, `autoLoadEntities`)
+- [x] `src/database/data-source.ts` para el CLI de TypeORM (migraciones)
+- [x] Builder de opciones compartido (`typeorm-options.ts`) para que runtime y CLI nunca se desincronicen
+- [x] **`BaseEntity`** abstracta: `id` (UUID) · `createdAt` · `updatedAt` · `deletedAt` (soft delete) · `version`
+- [x] Setup de migraciones + scripts npm (`migration:generate/run/revert`)
+- [x] `docker-compose.yml`: PostgreSQL (+ servicio Redis, cableado en la Fase 10)
 - [x] `.dockerignore`
-- [x] Snake_case naming strategy + `migrations` table config
-- [x] **Verified:** build OK; DB connection genuinely confirmed in Phase 3 (Docker Postgres on host port **5433** — a native PostgreSQL 18 owns 5432 on this machine)
+- [x] Estrategia de naming snake_case + config de la tabla `migrations`
+- [x] **Verificado:** build OK; conexión a la BD confirmada de verdad en la Fase 3 (Postgres en Docker en el puerto host **5433** — un PostgreSQL 18 nativo ocupa el 5432 en esta máquina)
 
 ---
 
-## ✅ Phase 3 — Common / Shared
+## ✅ Fase 3 — Common / Shared
 
-Cross-cutting building blocks reused by every feature module.
+Bloques transversales reutilizados por cada módulo de feature.
 
-- [x] Global `AllExceptionsFilter` → standardized shape `{ statusCode, code, message, error, timestamp, path, method, requestId, details }` (handles Business/Http/TypeORM/unknown)
-- [x] Custom business exceptions (`BusinessException` + `ErrorCode` enum + domain subclasses)
-- [x] Response transform interceptor → `{ data, meta }` (flattens `Paginated`), with `@RawResponse()` opt-out
-- [x] Logging interceptor (request/response timing)
-- [x] Timeout interceptor (408 on slow requests)
-- [x] Pagination: `PaginationQueryDto` (page, limit, sortBy, order, search), `paginate()`/`paginateArray()` helpers, `Paginated<T>`
-- [x] Query parsing: allow-listed search/sort in base service
-- [x] `@ApiPaginatedResponse()` Swagger helper
-- [x] **Generic CRUD**: abstract `BaseCrudService<T>` + `BaseCrudController` factory (DTO validation + Swagger safe)
-- [x] Common decorators: `@CurrentUser()` (foundation), `@RawResponse()`
-- [x] **Verified:** build OK; envelope `{data,meta}` and standardized 404 confirmed against a real (Docker) Postgres connection
-
----
-
-## ✅ Phase 4 — Users module
-
-- [x] `User` entity (extends `BaseEntity`), soft delete, `provider` field ready for auth/OAuth
-- [x] Request/response DTOs (`CreateUserDto`, `UpdateUserDto`, `UpdateProfileDto`, `UserResponseDto`) — separated from entity
-- [x] `UsersService` (extends `BaseCrudService`) + repo encapsulation, `findByEmail`, email-uniqueness guard
-- [x] `UsersController`: full CRUD + pagination/filters/sort via the generic base controller
-- [x] Own-profile endpoints via `MeController` (`GET/PATCH /users/me`) — 401 until auth lands (Phase 5)
-- [x] `HashingService` (argon2) — shared, global module
-- [x] First migration (`CreateUsers`) generated + run (with `uuid-ossp` extension)
-- [x] Admin user seeder + `npm run seed` runner (roles/permissions seed deferred to Phase 6)
-- [x] **Verified e2e** against real Postgres: create (201, no password leak), list (flattened `{data,meta}`), get, update, duplicate→409, validation→400, soft delete→204, 404-after-delete, restore, `/me`→401, bad-uuid→400
+- [x] `AllExceptionsFilter` global → forma estandarizada `{ statusCode, code, message, error, timestamp, path, method, requestId, details }` (maneja Business/Http/TypeORM/desconocido)
+- [x] Excepciones de negocio personalizadas (`BusinessException` + enum `ErrorCode` + subclases de dominio)
+- [x] Interceptor de transformación de respuesta → `{ data, meta }` (aplana `Paginated`), con opt-out `@RawResponse()`
+- [x] Interceptor de logging (timing de request/response)
+- [x] Interceptor de timeout (408 en peticiones lentas)
+- [x] Paginación: `PaginationQueryDto` (page, limit, sortBy, order, search), helpers `paginate()`/`paginateArray()`, `Paginated<T>`
+- [x] Parseo de query: search/sort con allow-list en el base service
+- [x] Helper de Swagger `@ApiPaginatedResponse()`
+- [x] **CRUD genérico**: `BaseCrudService<T>` abstracto + factory `BaseCrudController` (validación de DTO + seguro para Swagger)
+- [x] Decorators comunes: `@CurrentUser()` (base), `@RawResponse()`
+- [x] **Verificado:** build OK; envoltorio `{data,meta}` y 404 estandarizado confirmados contra una conexión real (Docker) a Postgres
 
 ---
 
-## ✅ Phase 5 — Authentication
+## ✅ Fase 4 — Módulo de Users
 
-- [x] `argon2` password hashing (via shared `HashingService`)
-- [x] Passport strategies: `local`, `jwt` (access), `jwt-refresh` (cookie)
+- [x] Entity `User` (extiende `BaseEntity`), soft delete, campo `provider` listo para auth/OAuth
+- [x] DTOs de request/response (`CreateUserDto`, `UpdateUserDto`, `UpdateProfileDto`, `UserResponseDto`) — separados de la entity
+- [x] `UsersService` (extiende `BaseCrudService`) + encapsulación del repo, `findByEmail`, guardia de unicidad de email
+- [x] `UsersController`: CRUD completo + paginación/filtros/orden vía el base controller genérico
+- [x] Endpoints de perfil propio vía `MeController` (`GET/PATCH /users/me`) — 401 hasta que llegue auth (Fase 5)
+- [x] `HashingService` (argon2) — módulo compartido y global
+- [x] Primera migración (`CreateUsers`) generada + ejecutada (con extensión `uuid-ossp`)
+- [x] Seeder de usuario admin + runner `npm run seed` (seed de roles/permisos diferido a la Fase 6)
+- [x] **Verificado e2e** contra Postgres real: create (201, sin fuga de password), list (`{data,meta}` aplanado), get, update, duplicado→409, validación→400, soft delete→204, 404-tras-borrado, restore, `/me`→401, uuid-malo→400
+
+---
+
+## ✅ Fase 5 — Autenticación
+
+- [x] Hashing de contraseñas `argon2` (vía el `HashingService` compartido)
+- [x] Estrategias de Passport: `local`, `jwt` (access), `jwt-refresh` (cookie)
 - [x] Endpoints: `register`, `login`, `refresh`, `logout`, `me`
-- [x] Access + refresh token issuance; refresh via **httpOnly cookie**; refresh **rotation** + reuse detection (per-session rows in `refresh_tokens` — multi-device, see Hardening)
-- [x] `@Public()` decorator + **global `JwtAuthGuard`** (every route protected by default)
-- [x] Token revocation: `TokenBlacklistService` abstraction + DB impl (`revoked_tokens`), swappable to Redis in Phase 10
-- [x] Auth DTOs (`RegisterDto`, `LoginDto`, `AuthResponseDto`) + Swagger annotations; tighter throttle on login
-- [x] Migration `CreateRevokedTokens` generated + run
-- [x] **Verified e2e**: login (200 + cookie), protected route 401→200 with token, `/auth/me` & `/users/me` work, wrong pw→401 `INVALID_CREDENTIALS`, refresh rotates token, logout→204, revoked token→401 `TOKEN_REVOKED`, refresh-after-logout→401, register→201, duplicate→409
+- [x] Emisión de access + refresh token; refresh vía **cookie httpOnly**; **rotación** de refresh + detección de reuse (filas por sesión en `refresh_tokens` — multi-dispositivo, ver Hardening)
+- [x] Decorator `@Public()` + **`JwtAuthGuard` global** (toda ruta protegida por defecto)
+- [x] Revocación de tokens: abstracción `TokenBlacklistService` + impl en BD (`revoked_tokens`), intercambiable a Redis en la Fase 10
+- [x] DTOs de auth (`RegisterDto`, `LoginDto`, `AuthResponseDto`) + anotaciones Swagger; throttle más estricto en login
+- [x] Migración `CreateRevokedTokens` generada + ejecutada
+- [x] **Verificado e2e**: login (200 + cookie), ruta protegida 401→200 con token, `/auth/me` y `/users/me` funcionan, pw incorrecta→401 `INVALID_CREDENTIALS`, refresh rota el token, logout→204, token revocado→401 `TOKEN_REVOKED`, refresh-tras-logout→401, register→201, duplicado→409
 
 ---
 
-## ✅ Phase 6 — Authorization (RBAC + PBAC)
+## ✅ Fase 6 — Autorización (RBAC + PBAC)
 
-- [x] `Role` and `Permission` entities (+ `role_permissions`, `user_roles` join tables; permissions eager on role)
-- [x] `@Roles()` decorator + global `RolesGuard` (any-of)
-- [x] `@RequirePermissions()` decorator + global `PermissionsGuard` (all-of, `resource:action`)
-- [x] `BaseCrudController` accepts per-action `permissions` → declarative PBAC for any resource
-- [x] `AuthorizationService` (assign roles) + default `user` role on registration
-- [x] JWT principal now carries real `roles`/`permissions` (loaded via `findByEmailWithRoles`)
-- [x] Seed base roles (`admin` = all, `user` = read-only) + assign `admin` to seeded admin
-- [x] Migration `CreateRbac` generated + run
-- [x] **Verified e2e**: admin (users:*) → GET 200 / POST 201 / DELETE 204; regular user (users:read) → GET 200, POST 403, DELETE 403 (`FORBIDDEN`, "Requires permission: users:create"), `/users/me` 200
-
----
-
-## ✅ Phase 7 — OAuth (extension)
-
-- [x] Google strategy (`passport-google-oauth20`), scope `email profile`
-- [x] GitHub strategy (`passport-github2`), scope `user:email`
-- [x] `OAuthController`: `/auth/{google,github}` (authorize) + `/callback` routes
-- [x] Callback flow → `handleOAuthLogin`: find by providerId → link existing email → else create passwordless user (+ default role), then issue app JWTs + refresh cookie
-- [x] Strategies registered **only when enabled + configured** (passport throws on empty clientID); guards return 404 when `OAUTH_ENABLED=false`
-- [x] Reuses `provider`/`providerId` columns from Phase 4 — **no migration needed**
-- [x] **Verified**: disabled → app boots clean, routes 404; enabled (dummy creds) → `/auth/google` & `/auth/github` 302-redirect to the providers with correct redirect_uri/scope/client_id (full callback needs real credentials)
+- [x] Entities `Role` y `Permission` (+ tablas de join `role_permissions`, `user_roles`; permisos eager en el rol)
+- [x] Decorator `@Roles()` + `RolesGuard` global (any-of)
+- [x] Decorator `@RequirePermissions()` + `PermissionsGuard` global (all-of, `resource:action`)
+- [x] `BaseCrudController` acepta `permissions` por acción → PBAC declarativo para cualquier recurso
+- [x] `AuthorizationService` (asignar roles) + rol `user` por defecto al registrarse
+- [x] El principal del JWT ahora lleva `roles`/`permissions` reales (cargados vía `findByEmailWithRoles`)
+- [x] Seed de roles base (`admin` = todo, `user` = solo lectura) + asignar `admin` al admin sembrado
+- [x] Migración `CreateRbac` generada + ejecutada
+- [x] **Verificado e2e**: admin (users:*) → GET 200 / POST 201 / DELETE 204; usuario normal (users:read) → GET 200, POST 403, DELETE 403 (`FORBIDDEN`, "Requires permission: users:create"), `/users/me` 200
 
 ---
 
-## ✅ Phase 8 — Observability & Docs
+## ✅ Fase 7 — OAuth (extensión)
 
-- [x] **Pino** structured logging (`nestjs-pino`): per-request `x-request-id` (echoed + used by the exceptions filter), secret redaction, pretty in dev / JSON in prod
-- [x] Framework logger replaced by Pino (`app.useLogger`); `/health` requests excluded from access logs
-- [x] Health checks (`@nestjs/terminus`) at `/api/health` (version-neutral, public): DB ping + heap; native Terminus shape via `@RawResponse()`
-- [x] **Swagger/OpenAPI** at `/api/docs` (+ `/api/docs-json`): bearer + cookie auth, `persistAuthorization`, tags, annotated DTOs
-- [x] **Verified**: `/api/health`→200 `{status:"ok", database:up}`, `/api/docs`→200 HTML, OpenAPI spec lists routes, `x-request-id` header present, logs structured with `responseTime`
-
----
-
-## ✅ Phase 9 — Testing & CI
-
-- [x] Jest **unit tests** (24): hashing, pagination helpers, roles/permissions guards, duration parser, `extractAuthz`
-- [x] **e2e tests** (11) with Supertest: public/health, auth (register/login/me/dupe/bad-pw), RBAC/PBAC, refresh + logout revocation
-- [x] Test DB strategy: `.env.test` (`NODE_ENV=test` → `template_test`, `DB_SYNCHRONIZE=true`, silent logs); `ConfigModule` loads `.env.<NODE_ENV>` first
-- [x] `test/jest-e2e.json` + `createTestApp` helper (mirrors `main.ts` middleware) + `setup-e2e.ts`
-- [x] ESLint override for test files (relax `no-unsafe-*` on supertest bodies)
-- [x] GitHub Actions CI (`.github/workflows/ci.yml`): Postgres service, `npm ci` → lint:check → build → unit → e2e
-- [x] **Verified locally**: 24 unit + 11 e2e green, `lint:check` clean, `build` clean
+- [x] Estrategia de Google (`passport-google-oauth20`), scope `email profile`
+- [x] Estrategia de GitHub (`passport-github2`), scope `user:email`
+- [x] `OAuthController`: rutas `/auth/{google,github}` (authorize) + `/callback`
+- [x] Flujo de callback → `handleOAuthLogin`: buscar por providerId → enlazar email existente → si no, crear usuario sin contraseña (+ rol por defecto), luego emitir los JWT de la app + cookie de refresh
+- [x] Estrategias registradas **solo cuando están activas + configuradas** (passport lanza con clientID vacío); los guards devuelven 404 cuando `OAUTH_ENABLED=false`
+- [x] Reutiliza las columnas `provider`/`providerId` de la Fase 4 — **sin migración necesaria**
+- [x] **Verificado**: apagado → la app levanta limpia, rutas 404; activado (creds dummy) → `/auth/google` y `/auth/github` redirigen 302 a los proveedores con redirect_uri/scope/client_id correctos (el callback completo necesita credenciales reales)
 
 ---
 
-## ✅ Phase 10 — Redis
+## ✅ Fase 8 — Observabilidad y Docs
 
-- [x] Global `RedisModule` (`ioredis`) providing `REDIS_CLIENT` (or `null`) behind `REDIS_ENABLED`; graceful `quit()` on shutdown
-- [x] `RedisTokenBlacklistService` with **native key TTL** (no cleanup cron); `TokenBlacklistService` bound via factory → Redis when available, else DB fallback
-- [x] Refresh rotation + reuse detection already in place (Phase 5); unaffected by store choice
-- [x] `/api/health` reports `redis:up` when enabled
-- [x] docker-compose Redis service used
-- [x] **Verified**: enabled → health shows redis:up, logout writes `bl:jti:*` (DBSIZE 0→1) with TTL ≈899s, revoked token→401 `TOKEN_REVOKED`; disabled → DB fallback, e2e 11/11 green
-
----
-
-## ✅ Phase 11 — Multi-tenancy (prepared, disabled)
-
-- [x] `AsyncLocalStorage` request context (`tenantStorage`) + `TenantContextService`
-- [x] `TenantMiddleware` (header → subdomain → JWT claim) — no-op while `MULTI_TENANT=false`
-- [x] `@Tenant()` param decorator
-- [x] `tenantId` hook on `BaseEntity` → now a full opt-in via `TenantScopedEntity` + auto-scoping (see Post-1.0 hardening)
-- [x] Global `TenancyModule`; `GET /` echoes the resolved tenant when enabled (verification path)
-- [x] USAGE.md → "Enabling multi-tenancy" guide (column + subscriber/scoping steps)
-- [x] **Verified both states**: disabled → response unchanged, `X-Tenant-ID` ignored; enabled → `tenant:"acme"` from header, `null` without; full suite still green (lint + 24 unit + 11 e2e)
+- [x] Logging estructurado con **Pino** (`nestjs-pino`): `x-request-id` por petición (devuelto + usado por el filtro de excepciones), redacción de secretos, pretty en dev / JSON en prod
+- [x] Logger del framework reemplazado por Pino (`app.useLogger`); peticiones a `/health` excluidas de los access logs
+- [x] Health checks (`@nestjs/terminus`) en `/api/health` (version-neutral, público): ping a la BD + heap; forma nativa de Terminus vía `@RawResponse()`
+- [x] **Swagger/OpenAPI** en `/api/docs` (+ `/api/docs-json`): auth bearer + cookie, `persistAuthorization`, tags, DTOs anotados
+- [x] **Verificado**: `/api/health`→200 `{status:"ok", database:up}`, `/api/docs`→200 HTML, el spec de OpenAPI lista las rutas, cabecera `x-request-id` presente, logs estructurados con `responseTime`
 
 ---
 
-## Extras (folded into phases above)
+## ✅ Fase 9 — Testing & CI
 
-- [x] API versioning (`/v1`) — Phase 1
-- [ ] Response envelope `{ data, meta }` — Phase 3
-- [ ] Custom schematics / module generator — optional, post-1.0
+- [x] **Tests unitarios** con Jest (24): hashing, helpers de paginación, guards de roles/permisos, parser de duración, `extractAuthz`
+- [x] **Tests e2e** (11) con Supertest: public/health, auth (register/login/me/dupe/bad-pw), RBAC/PBAC, refresh + revocación en logout
+- [x] Estrategia de BD de test: `.env.test` (`NODE_ENV=test` → `template_test`, `DB_SYNCHRONIZE=true`, logs silenciosos); `ConfigModule` carga `.env.<NODE_ENV>` primero
+- [x] `test/jest-e2e.json` + helper `createTestApp` (replica el middleware de `main.ts`) + `setup-e2e.ts`
+- [x] Override de ESLint para archivos de test (relaja `no-unsafe-*` en los bodies de supertest)
+- [x] CI en GitHub Actions (`.github/workflows/ci.yml`): servicio Postgres, `npm ci` → lint:check → build → unit → e2e
+- [x] **Verificado localmente**: 24 unit + 11 e2e en verde, `lint:check` limpio, `build` limpio
 
 ---
 
-## ✅ Post-1.0 hardening
+## ✅ Fase 10 — Redis
 
-- [x] Multi-stage, non-root **`Dockerfile`** (deps + `dist/` only; starts Node directly for graceful shutdown)
-- [x] **Swagger disabled in production** unless `SWAGGER_ENABLED=true`
-- [x] Request **body-size limit** (`APP_BODY_LIMIT`, default `1mb`) on the json/urlencoded parsers
-- [x] Tighter per-endpoint throttles on `auth/register` (5/min) and `auth/refresh` (20/min)
-- [x] CI runs a **Redis service** and e2e with `REDIS_ENABLED=true`, exercising the Redis blacklist path
-- [x] `.nvmrc` pins Node 20
-- [x] **Multi-session refresh tokens**: dedicated `refresh_tokens` table (one row per device), concurrent
-      logins, per-session logout, and reuse detection that revokes the whole session family — access
-      tokens carry a `sid` claim so logout targets the exact session (migration `AddRefreshTokens`)
-- [x] **Tenant enforcement** (Phase 11 completion): `TenantScopedEntity` + `TenantSubscriber` (stamps
-      `tenantId` on insert) + `BaseCrudService` auto-scoping reads/updates/deletes. Opt-in per entity,
-      immutable `tenantId` on update, and a no-op while `MULTI_TENANT=false`
-- [x] **Error reporting seam**: pluggable `ErrorReporter` (`ERROR_REPORTER` token) consumed by the
-      exception filter for 5xx errors; no-op by default, swap in Sentry/OTel without touching the filter
-- [x] **Verified**: lint clean, 33 unit + 14 e2e green (incl. multi-session/reuse, tenant-scoping and
-      error-reporter unit cases) against Postgres, and 14/14 again with `REDIS_ENABLED=true`
+- [x] `RedisModule` global (`ioredis`) que provee `REDIS_CLIENT` (o `null`) según `REDIS_ENABLED`; `quit()` graceful en el apagado
+- [x] `RedisTokenBlacklistService` con **TTL nativo de claves** (sin cron de limpieza); `TokenBlacklistService` enlazado vía factory → Redis cuando está disponible, si no fallback a BD
+- [x] Rotación de refresh + detección de reuse ya presentes (Fase 5); no afectadas por la elección de store
+- [x] `/api/health` reporta `redis:up` cuando está activo
+- [x] Servicio Redis de docker-compose usado
+- [x] **Verificado**: activo → health muestra redis:up, logout escribe `bl:jti:*` (DBSIZE 0→1) con TTL ≈899s, token revocado→401 `TOKEN_REVOKED`; apagado → fallback a BD, e2e 11/11 en verde
+
+---
+
+## ✅ Fase 11 — Multi-tenancy (preparada, deshabilitada)
+
+- [x] Contexto de petición con `AsyncLocalStorage` (`tenantStorage`) + `TenantContextService`
+- [x] `TenantMiddleware` (header → subdominio → claim del JWT) — no-op mientras `MULTI_TENANT=false`
+- [x] Decorator de parámetro `@Tenant()`
+- [x] Hook de `tenantId` en `BaseEntity` → ahora un opt-in completo vía `TenantScopedEntity` + auto-scoping (ver Hardening post-1.0)
+- [x] `TenancyModule` global; `GET /` devuelve el tenant resuelto cuando está activo (ruta de verificación)
+- [x] USAGE.md → guía "Activar multi-tenancy" (pasos de columna + subscriber/scoping)
+- [x] **Verificado en ambos estados**: apagado → respuesta sin cambios, `X-Tenant-ID` ignorado; activo → `tenant:"acme"` desde el header, `null` sin él; suite completa aún en verde (lint + 24 unit + 11 e2e)
+
+---
+
+## Extras (integrados en las fases de arriba)
+
+- [x] Versionado de API (`/v1`) — Fase 1
+- [ ] Envoltorio de respuesta `{ data, meta }` — Fase 3
+- [ ] Schematics personalizados / generador de módulos — opcional, post-1.0
+
+---
+
+## ✅ Hardening post-1.0
+
+- [x] **`Dockerfile`** multi-stage, no-root (solo deps + `dist/`; arranca Node directamente para apagado graceful)
+- [x] **Swagger deshabilitado en producción** salvo que `SWAGGER_ENABLED=true`
+- [x] **Límite de tamaño de body** de las peticiones (`APP_BODY_LIMIT`, default `1mb`) en los parsers json/urlencoded
+- [x] Throttles por endpoint más estrictos en `auth/register` (5/min) y `auth/refresh` (20/min)
+- [x] El CI corre un **servicio Redis** y e2e con `REDIS_ENABLED=true`, ejercitando el camino de blacklist en Redis
+- [x] `.nvmrc` fija Node 20
+- [x] **Refresh tokens multi-sesión**: tabla dedicada `refresh_tokens` (una fila por dispositivo), logins
+      concurrentes, logout por sesión, y detección de reuse que revoca toda la familia de sesiones — los
+      access tokens llevan un claim `sid` para que el logout apunte a la sesión exacta (migración `AddRefreshTokens`)
+- [x] **Enforcement de tenant** (completar la Fase 11): `TenantScopedEntity` + `TenantSubscriber` (estampa
+      `tenantId` en el insert) + auto-scoping de lecturas/updates/deletes en `BaseCrudService`. Opt-in por
+      entidad, `tenantId` inmutable en update, y no-op mientras `MULTI_TENANT=false`
+- [x] **Seam de reporte de errores**: `ErrorReporter` pluggable (token `ERROR_REPORTER`) consumido por el
+      filtro de excepciones para errores 5xx; no-op por defecto, se cambia a Sentry/OTel sin tocar el filtro
+- [x] **Verificado**: lint limpio, 33 unit + 14 e2e en verde (incl. multi-sesión/reuse, tenant-scoping y
+      casos unit del error-reporter) contra Postgres, y 14/14 otra vez con `REDIS_ENABLED=true`

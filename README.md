@@ -1,285 +1,284 @@
 # template
 
-Base template for NestJS projects — modular architecture, JWT auth (access + refresh),
-RBAC + granular permissions (PBAC), TypeORM + PostgreSQL, strict TypeScript, and a full
-tooling/security/observability setup.
+Plantilla base para proyectos NestJS — arquitectura modular, autenticación JWT (access + refresh),
+RBAC + permisos granulares (PBAC), TypeORM + PostgreSQL, TypeScript estricto y una configuración
+completa de tooling/seguridad/observabilidad.
 
-> Built in phases. See **Roadmap** below for what is implemented and what is pending.
+> Construida por fases. Consulta el **Roadmap** más abajo para ver qué está implementado y qué queda pendiente.
 
-> 🧩 **Starting a new project from this template?** Read **[USAGE.md](./USAGE.md)** — how to
-> rename, configure secrets, initialize the DB, and add your first feature module.
+> 🧩 **¿Vas a arrancar un proyecto nuevo desde esta plantilla?** Lee **[USAGE.md](./USAGE.md)** — cómo
+> renombrar, configurar los secretos, inicializar la BD y añadir tu primer módulo de feature.
 
-## Tech stack
+## Stack tecnológico
 
-| Concern            | Choice                                        |
+| Aspecto            | Elección                                      |
 | ------------------ | --------------------------------------------- |
 | Framework          | NestJS 11                                     |
-| Language           | TypeScript (strict mode)                      |
-| ORM / DB           | TypeORM + PostgreSQL                          |
-| Auth               | Passport (JWT + local), argon2 hashing, multi-session refresh rotation |
-| Authorization      | RBAC (`@Roles()`) + PBAC (`@RequirePermissions()`) |
-| Config validation  | `@nestjs/config` + Joi                        |
+| Lenguaje           | TypeScript (modo estricto)                    |
+| ORM / BD           | TypeORM + PostgreSQL                          |
+| Auth               | Passport (JWT + local), hashing argon2, rotación de refresh multi-sesión |
+| Autorización       | RBAC (`@Roles()`) + PBAC (`@RequirePermissions()`) |
+| Validación de config | `@nestjs/config` + Joi                      |
 | Logging            | Pino (`nestjs-pino`)                          |
-| Docs               | Swagger / OpenAPI (off in production by default) |
-| Security           | Helmet, CORS, `@nestjs/throttler`, request body-size limit, strict validation |
-| Testing            | Jest (unit + e2e with Supertest)             |
+| Docs               | Swagger / OpenAPI (apagado en producción por defecto) |
+| Seguridad          | Helmet, CORS, `@nestjs/throttler`, límite de tamaño de body, validación estricta |
+| Testing            | Jest (unit + e2e con Supertest)              |
 
-## Requirements
+## Requisitos
 
-- Node.js >= 20 (an `.nvmrc` pins `20` — run `nvm use`)
+- Node.js >= 20 (un `.nvmrc` fija `20` — ejecuta `nvm use`)
 - npm >= 10
-- Docker (for PostgreSQL / Redis via `docker-compose`, and the production image — see [Deployment](#deployment))
+- Docker (para PostgreSQL / Redis vía `docker-compose`, y la imagen de producción — ver [Despliegue](#despliegue))
 
-## Getting started
+## Primeros pasos
 
 ```bash
-# 1. Install dependencies
+# 1. Instalar dependencias
 npm install
 
-# 2. Create your env file and adjust secrets
+# 2. Crear tu archivo de entorno y ajustar los secretos
 cp .env.example .env            # PowerShell: Copy-Item .env.example .env
 
-# 3. Run in watch mode
+# 3. Ejecutar en modo watch
 npm run start:dev
 ```
 
-The API is served under a versioned prefix: `http://localhost:3000/api/v1`.
+La API se sirve bajo un prefijo versionado: `http://localhost:3000/api/v1`.
 
-> **Windows users:** see [Manual testing (Windows / PowerShell)](#manual-testing-windows--powershell)
-> for a full setup + testing walkthrough using PowerShell.
+> **Usuarios de Windows:** consulta [Pruebas manuales (Windows / PowerShell)](#pruebas-manuales-windows--powershell)
+> para un recorrido completo de configuración + pruebas usando PowerShell.
 
-## Available scripts
+## Scripts disponibles
 
-| Script                     | Description                                  |
+| Script                     | Descripción                                  |
 | -------------------------- | -------------------------------------------- |
-| `npm run start:dev`        | Start in watch mode                          |
-| `npm run build`            | Compile to `dist/`                           |
-| `npm run lint`             | Lint and auto-fix                            |
-| `npm run format`           | Format with Prettier                         |
-| `npm test`                 | Unit tests                                   |
-| `npm run test:e2e`         | End-to-end tests                             |
-| `npm run migration:run`    | Run pending TypeORM migrations (Phase 2)     |
-| `npm run seed`             | Seed base data (Phase 4)                     |
+| `npm run start:dev`        | Arrancar en modo watch                       |
+| `npm run build`            | Compilar a `dist/`                           |
+| `npm run lint`             | Lint con auto-fix                            |
+| `npm run format`           | Formatear con Prettier                       |
+| `npm test`                 | Tests unitarios                              |
+| `npm run test:e2e`         | Tests end-to-end                             |
+| `npm run migration:run`    | Ejecutar migraciones TypeORM pendientes (Fase 2) |
+| `npm run seed`             | Sembrar datos base (Fase 4)                  |
 
-## Environment variables
+## Variables de entorno
 
-All variables are documented and validated. See [`.env.example`](./.env.example) — the app
-fails fast on startup if a required variable is missing or invalid.
+Todas las variables están documentadas y validadas. Ver [`.env.example`](./.env.example) — la app
+falla rápido al arrancar si falta una variable requerida o es inválida.
 
-## Manual testing (Windows / PowerShell)
+## Pruebas manuales (Windows / PowerShell)
 
-> 🚀 **Swagger UI** is available at **`http://localhost:3000/api/docs`** — the easiest way to
-> explore and try endpoints from the browser (click **Authorize** and paste a JWT access token).
-> The OpenAPI JSON is at `/api/docs-json`. A **health check** lives at `/api/health`.
+> 🚀 **Swagger UI** está disponible en **`http://localhost:3000/api/docs`** — la forma más fácil de
+> explorar y probar endpoints desde el navegador (haz clic en **Authorize** y pega un access token JWT).
+> El JSON de OpenAPI está en `/api/docs-json`. Un **health check** vive en `/api/health`.
 >
-> ℹ️ Docs are **disabled when `NODE_ENV=production`** (so the API surface isn't publicly
-> enumerable). Set `SWAGGER_ENABLED=true` to force them on there — e.g. behind an internal gateway.
+> ℹ️ Las docs están **deshabilitadas cuando `NODE_ENV=production`** (para que la superficie de la API no
+> sea públicamente enumerable). Pon `SWAGGER_ENABLED=true` para forzarlas ahí — p. ej. detrás de un gateway interno.
 >
-> Authentication is live: **every route requires a Bearer access token** except those marked
+> La autenticación está activa: **toda ruta requiere un access token Bearer** salvo las marcadas con
 > `@Public()` (`GET /`, `/api/health`, `POST /auth/register`, `POST /auth/login`,
-> `POST /auth/refresh`). The public auth endpoints also carry **tighter per-minute rate limits**
-> than the global throttler (`register` 5, `login` 10, `refresh` 20) to blunt brute-force and
-> automated-signup abuse. You can also test with PowerShell, Postman, or the VS Code REST
-> Client / Thunder Client extensions as shown below.
+> `POST /auth/refresh`). Los endpoints de auth públicos además llevan **límites de tasa por minuto más
+> estrictos** que el throttler global (`register` 5, `login` 10, `refresh` 20) para frenar la fuerza bruta
+> y el registro automatizado. También puedes probar con PowerShell, Postman, o las extensiones de VS Code
+> REST Client / Thunder Client como se muestra abajo.
 
-⚠️ In PowerShell, `curl` is an **alias for `Invoke-WebRequest`** and behaves differently from
-real curl. Use **`Invoke-RestMethod`** (parses JSON automatically) or call **`curl.exe`**
-explicitly.
+⚠️ En PowerShell, `curl` es un **alias de `Invoke-WebRequest`** y se comporta distinto al curl real.
+Usa **`Invoke-RestMethod`** (parsea JSON automáticamente) o llama a **`curl.exe`** explícitamente.
 
-### 1. Bring the stack up
+### 1. Levantar el stack
 
 ```powershell
-docker compose up -d postgres   # PostgreSQL (published on the DB_PORT from .env)
-npm install                     # first time only
-npm run migration:run           # create the users table
-npm run seed                    # create the admin user (admin@template.local)
-npm run start:dev               # API at http://localhost:3000/api/v1
+docker compose up -d postgres   # PostgreSQL (publicado en el DB_PORT del .env)
+npm install                     # solo la primera vez
+npm run migration:run           # crear la tabla de usuarios
+npm run seed                    # crear el usuario admin (admin@template.local)
+npm run start:dev               # API en http://localhost:3000/api/v1
 ```
 
-> **Port note:** if a local PostgreSQL already owns `5432`, set `DB_PORT=5433` in `.env`
-> (docker-compose publishes that port). Check with:
+> **Nota sobre el puerto:** si un PostgreSQL local ya ocupa el `5432`, pon `DB_PORT=5433` en `.env`
+> (docker-compose publica ese puerto). Compruébalo con:
 > `Get-NetTCPConnection -LocalPort 5432 -State Listen -ErrorAction SilentlyContinue`
 
-### 2. Easiest: test in the browser (Swagger UI)
+### 2. Lo más fácil: probar en el navegador (Swagger UI)
 
-No tooling needed — with the app running, open **http://localhost:3000/api/docs**.
+Sin herramientas — con la app corriendo, abre **http://localhost:3000/api/docs**.
 
-1. Expand **`POST /auth/login`** → **Try it out** → log in as the seeded admin:
+1. Expande **`POST /auth/login`** → **Try it out** → inicia sesión como el admin sembrado:
    ```json
    { "email": "admin@template.local", "password": "Admin123!" }
    ```
-   **Execute**, then copy the `accessToken` from the response.
-2. Click **Authorize** 🔒 (top-right), paste the token, **Authorize**, **Close**.
-   Now every protected request is sent with your `Bearer` token.
-3. Try any endpoint — e.g. `GET /users`, `POST /users`, `GET /users/me`, `POST /auth/logout`.
-   Use **Try it out → Execute** and inspect the response, status code, and headers.
+   **Execute**, luego copia el `accessToken` de la respuesta.
+2. Haz clic en **Authorize** 🔒 (arriba a la derecha), pega el token, **Authorize**, **Close**.
+   Ahora cada petición protegida se envía con tu token `Bearer`.
+3. Prueba cualquier endpoint — p. ej. `GET /users`, `POST /users`, `GET /users/me`, `POST /auth/logout`.
+   Usa **Try it out → Execute** e inspecciona la respuesta, el código de estado y las cabeceras.
 
-> Prefer the console? Sections 3–5 below do the same from PowerShell. The health check
-> (`GET /api/health`, public) and OpenAPI JSON (`/api/docs-json`) need no auth.
+> ¿Prefieres la consola? Las secciones 3–5 de abajo hacen lo mismo desde PowerShell. El health check
+> (`GET /api/health`, público) y el JSON de OpenAPI (`/api/docs-json`) no requieren auth.
 
-### 3. PowerShell — authenticate (get a token)
+### 3. PowerShell — autenticarse (obtener un token)
 
 ```powershell
 $base = "http://localhost:3000/api/v1"
 
-# Register a new account (or log in with the seeded admin below)
+# Registrar una cuenta nueva (o inicia sesión con el admin sembrado más abajo)
 $reg = @{ email = "test@example.com"; password = "Str0ng!Pass"; firstName = "Test" } | ConvertTo-Json
 $auth = Invoke-RestMethod "$base/auth/register" -Method Post -ContentType "application/json" -Body $reg
 
-# Or log in as the seeded admin
+# O inicia sesión como el admin sembrado
 $login = @{ email = "admin@template.local"; password = "Admin123!" } | ConvertTo-Json
 $auth  = Invoke-RestMethod "$base/auth/login" -Method Post -ContentType "application/json" -Body $login
 
-# Build the auth header used for all protected calls below
+# Construir la cabecera de auth usada en todas las llamadas protegidas de abajo
 $token   = $auth.data.accessToken
 $headers = @{ Authorization = "Bearer $token" }
 
-# Who am I?
+# ¿Quién soy?
 Invoke-RestMethod "$base/auth/me" -Headers $headers
 ```
 
-> The **refresh token** is set as an httpOnly cookie, so `Invoke-RestMethod` can't read it.
-> To test `/auth/refresh` and `/auth/logout` end-to-end, use `curl.exe` with a cookie jar
-> (`-c cookies.txt -b cookies.txt`) or Postman (which keeps cookies automatically).
+> El **refresh token** se establece como cookie httpOnly, así que `Invoke-RestMethod` no puede leerlo.
+> Para probar `/auth/refresh` y `/auth/logout` de punta a punta, usa `curl.exe` con un cookie jar
+> (`-c cookies.txt -b cookies.txt`) o Postman (que guarda las cookies automáticamente).
 
-### 4. PowerShell — requests with `Invoke-RestMethod` (protected routes)
+### 4. PowerShell — peticiones con `Invoke-RestMethod` (rutas protegidas)
 
 ```powershell
-# App info is public (no header needed)
+# La info de la app es pública (no necesita cabecera)
 Invoke-RestMethod "$base"
 
-# Create a user (protected — pass $headers)
+# Crear un usuario (protegido — pasa $headers)
 $body = @{ email = "someone@example.com"; password = "Str0ng!Pass"; firstName = "Sam" } | ConvertTo-Json
 $created = Invoke-RestMethod "$base/users" -Method Post -Headers $headers -ContentType "application/json" -Body $body
 $created.data
-$id = $created.data.id      # keep the id for the next calls
+$id = $created.data.id      # guarda el id para las siguientes llamadas
 
-# List (pagination + search + sort)
+# Listar (paginación + búsqueda + orden)
 Invoke-RestMethod "$base/users?page=1&limit=10&sortBy=email&order=ASC&search=sam" -Headers $headers
 
-# Get one
+# Obtener uno
 Invoke-RestMethod "$base/users/$id" -Headers $headers
 
-# Update
+# Actualizar
 $patch = @{ firstName = "Nuevo" } | ConvertTo-Json
 Invoke-RestMethod "$base/users/$id" -Method Patch -Headers $headers -ContentType "application/json" -Body $patch
 
-# Soft delete (204) then restore
+# Soft delete (204) y luego restaurar
 Invoke-RestMethod "$base/users/$id" -Method Delete -Headers $headers
 Invoke-RestMethod "$base/users/$id/restore" -Method Patch -Headers $headers
 
-# Update your own profile
+# Actualizar tu propio perfil
 $mine = @{ firstName = "Me" } | ConvertTo-Json
 Invoke-RestMethod "$base/users/me" -Method Patch -Headers $headers -ContentType "application/json" -Body $mine
 ```
 
-To see the body of an **error** response (PowerShell throws on 4xx/5xx):
+Para ver el cuerpo de una respuesta de **error** (PowerShell lanza excepción en 4xx/5xx):
 
 ```powershell
 try {
   $dup = @{ email = "someone@example.com"; password = "Str0ng!Pass" } | ConvertTo-Json
   Invoke-RestMethod "$base/users" -Method Post -Headers $headers -ContentType "application/json" -Body $dup
 } catch {
-  $_.ErrorDetails.Message   # standardized { statusCode, code, message, timestamp, path, method }
+  $_.ErrorDetails.Message   # estandarizado { statusCode, code, message, timestamp, path, method }
 }
 ```
 
-### 5. Full auth flow with `curl.exe` (cookies for refresh/logout)
+### 5. Flujo de auth completo con `curl.exe` (cookies para refresh/logout)
 
 ```powershell
 $b = "http://localhost:3000/api/v1"
-# login — store the refresh cookie in cookies.txt
+# login — guarda la cookie de refresh en cookies.txt
 curl.exe -c cookies.txt -X POST "$b/auth/login" -H "Content-Type: application/json" -d '{\"email\":\"admin@template.local\",\"password\":\"Admin123!\"}'
-# refresh — send + update the cookie (returns a new access token)
+# refresh — envía + actualiza la cookie (devuelve un nuevo access token)
 curl.exe -b cookies.txt -c cookies.txt -X POST "$b/auth/refresh"
-# logout — needs the access token; clears the refresh cookie
+# logout — necesita el access token; limpia la cookie de refresh
 curl.exe -b cookies.txt -X POST "$b/auth/logout" -H "Authorization: Bearer <accessToken>"
 ```
 
-### 6. Feature checklist — what to verify
+### 6. Checklist de features — qué verificar
 
-Run these (in Swagger or PowerShell) to confirm each part of the template works:
+Ejecuta esto (en Swagger o PowerShell) para confirmar que cada parte de la plantilla funciona:
 
-| Feature | How to test | Expected |
+| Feature | Cómo probarlo | Esperado |
 | --- | --- | --- |
-| Health check | `GET /api/health` (public) | `200`, `status: ok`, database `up` |
-| Login | `POST /auth/login` as admin | `200` + `accessToken` |
-| Global auth guard | `GET /users` **without** a token | `401` |
-| Auth guard (happy path) | `GET /users` **with** a valid token | `200` |
-| Wrong credentials | login with a bad password | `401` `INVALID_CREDENTIALS` |
-| Password hidden | any user response | no `password` field ever |
-| Input validation | `POST /users` weak password / extra field | `400` + list of errors |
-| Duplicate email | register/create an existing email | `409` `EMAIL_ALREADY_EXISTS` |
-| RBAC/PBAC — denied | as a **regular** user, `POST /users` | `403` (only has `users:read`) |
-| RBAC/PBAC — allowed | as **admin**, `POST /users` | `201` |
-| Pagination | `GET /users?page=1&limit=5&search=admin` | envelope `{ data, meta }` |
-| Soft delete | `DELETE /users/:id` then `GET /users/:id` | `204`, then `404` |
+| Health check | `GET /api/health` (público) | `200`, `status: ok`, database `up` |
+| Login | `POST /auth/login` como admin | `200` + `accessToken` |
+| Guard de auth global | `GET /users` **sin** token | `401` |
+| Guard de auth (caso feliz) | `GET /users` **con** un token válido | `200` |
+| Credenciales incorrectas | login con contraseña mala | `401` `INVALID_CREDENTIALS` |
+| Contraseña oculta | cualquier respuesta de usuario | nunca aparece el campo `password` |
+| Validación de entrada | `POST /users` contraseña débil / campo extra | `400` + lista de errores |
+| Email duplicado | registrar/crear un email existente | `409` `EMAIL_ALREADY_EXISTS` |
+| RBAC/PBAC — denegado | como usuario **normal**, `POST /users` | `403` (solo tiene `users:read`) |
+| RBAC/PBAC — permitido | como **admin**, `POST /users` | `201` |
+| Paginación | `GET /users?page=1&limit=5&search=admin` | envoltorio `{ data, meta }` |
+| Soft delete | `DELETE /users/:id` y luego `GET /users/:id` | `204`, luego `404` |
 | Restore | `PATCH /users/:id/restore` | `200` |
-| Token revocation | `logout`, then reuse that access token | `401` `TOKEN_REVOKED` |
-| Multi-session | log in twice, `refresh` with the **first** session's cookie | `200` (both sessions live) |
-| Per-session logout | `logout` one session; the other's access token | still `200` on `/auth/me` |
-| Refresh reuse detection | rotate via `refresh`, then replay the **old** cookie | `401` `TOKEN_REVOKED` (family revoked) |
-| Error shape | trigger any error | `{ statusCode, code, message, timestamp, path, method }` |
+| Revocación de token | `logout`, luego reusar ese access token | `401` `TOKEN_REVOKED` |
+| Multi-sesión | inicia sesión dos veces, `refresh` con la cookie de la **primera** sesión | `200` (ambas sesiones vivas) |
+| Logout por sesión | `logout` de una sesión; el access token de la otra | sigue `200` en `/auth/me` |
+| Detección de reuse de refresh | rota vía `refresh`, luego reproduce la cookie **vieja** | `401` `TOKEN_REVOKED` (familia revocada) |
+| Forma del error | provoca cualquier error | `{ statusCode, code, message, timestamp, path, method }` |
 
-### 7. Inspect the database directly
+### 7. Inspeccionar la base de datos directamente
 
 ```powershell
 docker exec -it template_postgres psql -U postgres -d template -c "select id, email, is_active, deleted_at from users;"
 ```
 
-### Troubleshooting
+### Solución de problemas
 
-- **App won't start / port 3000 busy** — a stale Node process may be holding it. Find and kill it:
+- **La app no arranca / puerto 3000 ocupado** — puede haber un proceso Node zombi reteniéndolo. Encuéntralo y mátalo:
   ```powershell
   Get-NetTCPConnection -LocalPort 3000 -State Listen | Select-Object -Expand OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }
   ```
-- **`password authentication failed`** — the app is hitting a local PostgreSQL instead of the
-  container. Point `DB_PORT` at the container's published port (e.g. `5433`).
+- **`password authentication failed`** — la app está pegándole a un PostgreSQL local en vez de al
+  contenedor. Apunta `DB_PORT` al puerto publicado del contenedor (p. ej. `5433`).
 
-## Testing
+## Pruebas
 
 ```powershell
-npm test           # unit tests (Jest)
-npm run test:e2e   # end-to-end tests (Supertest, hits a real Postgres)
-npm run test:cov   # coverage
+npm test           # tests unitarios (Jest)
+npm run test:e2e   # tests end-to-end (Supertest, contra un Postgres real)
+npm run test:cov   # cobertura
 ```
 
-**E2E setup:** e2e tests run against a separate database (`template_test`) with schema
-auto-sync, configured in [`.env.test`](./.env.test) (`NODE_ENV=test`). Create it once:
+**Setup de E2E:** los tests e2e corren contra una base de datos separada (`template_test`) con
+auto-sync de esquema, configurada en [`.env.test`](./.env.test) (`NODE_ENV=test`). Créala una vez:
 
 ```powershell
 docker exec template_postgres createdb -U postgres template_test
 ```
 
-The suite seeds base roles/permissions itself and cleans up via unique per-run emails.
-CI (GitHub Actions, [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) runs
-`lint → build → unit → e2e` on every push/PR against Postgres **and** Redis services — the e2e
-job runs with `REDIS_ENABLED=true` so the Redis-backed token blacklist (the production default)
-is exercised, not just the Postgres fallback.
+La suite siembra los roles/permisos base por sí misma y limpia con emails únicos por corrida.
+El CI (GitHub Actions, [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) ejecuta
+`lint → build → unit → e2e` en cada push/PR contra servicios de Postgres **y** Redis — el job de e2e
+corre con `REDIS_ENABLED=true` para que la blacklist de tokens en Redis (el default de producción)
+se ejercite, no solo el fallback en Postgres.
 
-## Deployment
+## Despliegue
 
-A multi-stage [`Dockerfile`](./Dockerfile) builds a lean production image (deps + compiled
-`dist/` only) that runs as a non-root `node` user and starts Node directly, so `SIGTERM` reaches
-the process and graceful shutdown hooks fire.
+Un [`Dockerfile`](./Dockerfile) multi-stage construye una imagen de producción ligera (solo deps +
+`dist/` compilado) que corre como usuario `node` no-root y arranca Node directamente, de modo que
+`SIGTERM` llega al proceso y se disparan los hooks de apagado graceful.
 
 ```bash
 docker build -t my-api .
 docker run --rm -p 3000:3000 --env-file .env my-api
 ```
 
-Set `NODE_ENV=production` in the container's env. Remember Swagger is off in production unless
-`SWAGGER_ENABLED=true`, and cap request size with `APP_BODY_LIMIT` (default `1mb`).
+Pon `NODE_ENV=production` en el entorno del contenedor. Recuerda que Swagger está apagado en producción
+salvo que `SWAGGER_ENABLED=true`, y limita el tamaño de las peticiones con `APP_BODY_LIMIT` (default `1mb`).
 
-## Project structure
+## Estructura del proyecto
 
 ```
 src/
-├── config/            # Namespaced, validated configuration (Joi)
-├── common/            # Cross-cutting: filters, interceptors, guards, decorators, DTOs (Phase 3)
-├── database/          # TypeORM data-source, migrations, seeds (Phase 2/4)
-├── shared/            # Reusable providers/services across modules
-├── modules/           # Feature modules (users, auth, ...) (Phase 4+)
+├── config/            # Configuración validada y por namespaces (Joi)
+├── common/            # Transversal: filters, interceptors, guards, decorators, DTOs (Fase 3)
+├── database/          # Data-source de TypeORM, migraciones, seeds (Fase 2/4)
+├── shared/            # Providers/servicios reutilizables entre módulos
+├── modules/           # Módulos de feature (users, auth, ...) (Fase 4+)
 ├── app.controller.ts
 ├── app.module.ts
 └── main.ts
@@ -287,11 +286,11 @@ src/
 
 ## Roadmap
 
-Phased delivery — **all 11 phases complete** ✅. Full checklist per phase in **[ROADMAP.md](./ROADMAP.md)**.
+Entrega por fases — **las 11 fases completas** ✅. Checklist completo por fase en **[ROADMAP.md](./ROADMAP.md)**.
 
 Foundation · Database · Common/CRUD base · Users · Auth (JWT + refresh) · RBAC/PBAC · OAuth ·
-Observability (Pino/Terminus/Swagger) · Testing & CI · Redis blacklist · Multi-tenancy hooks.
+Observabilidad (Pino/Terminus/Swagger) · Testing & CI · Blacklist en Redis · Hooks de multi-tenancy.
 
-## License
+## Licencia
 
 MIT
