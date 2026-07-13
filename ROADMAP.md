@@ -164,7 +164,8 @@ Bloques transversales reutilizados por cada módulo de feature.
 
 - [x] Versionado de API (`/v1`) — Fase 1
 - [ ] Envoltorio de respuesta `{ data, meta }` — Fase 3
-- [ ] Schematics personalizados / generador de módulos — opcional, post-1.0
+- [x] Generador de módulos de feature (`npm run g:module -- <recurso>`) — scaffolding CRUD completo
+      (entity/DTOs/service/controller/module) espejo de `modules/users`, con PBAC opcional. Ver USAGE §6
 
 ---
 

@@ -115,6 +115,22 @@ cómo ejercitar los endpoints desde PowerShell.
 
 ## 6. Añadir tu primer módulo de feature
 
+> **Atajo — generador de módulos.** Para no escribir el andamiaje a mano, usa el generador incluido:
+>
+> ```powershell
+> npm run g:module -- product          # recurso singular, en cualquier caso (product, blog-post, BlogPost)
+> npm run g:module -- product --no-permissions   # sin guards PBAC por acción
+> ```
+>
+> Genera el paquete completo (entity que extiende `BaseEntity`, DTOs create/update/response, service
+> sobre `BaseCrudService`, controller vía el factory `BaseCrudController` con permisos PBAC, y el module),
+> con la misma forma que `src/modules/users`. No sobreescribe archivos existentes salvo `--force`. Al
+> terminar imprime los pasos manuales que faltan: **registrar el module** en `app.module.ts`, **generar la
+> migración** de la tabla nueva, y **sembrar los permisos** `<recurso>:create|read|update|delete`.
+>
+> El resto de esta sección explica **a mano** lo que produce el generador — útil para entender las piezas o
+> personalizar un recurso. Ejemplo con `Product`:
+
 La plantilla te da un CRUD genérico, así que un recurso nuevo es mayormente cableado. Ejemplo — un
 recurso `Product`:
 
